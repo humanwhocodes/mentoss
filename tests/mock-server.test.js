@@ -307,6 +307,79 @@ describe("MockServer", () => {
 		
 	});
 	
+	describe("Params", () => {
+		
+		it("should match a route with all URL parameters present", async () => {
+			server.get({
+				url: "/users/:id",
+				params: {
+					id: "123",
+				},
+			}, { status: 200, body: "OK" });
+
+			const request = createRequest({
+				method: "GET",
+				url: `${BASE_URL}/users/123`,
+			});
+
+			const response = await server.receive(request);
+			assert.strictEqual(response.status, 200);
+			assert.strictEqual(response.statusText, "OK");
+			assert.strictEqual(await getResponseBody(response), "OK");
+		});
+		
+		it("should not match a route with matching URL parameters in subpath", async () => {
+			server.get({
+				url: "/users/:id",
+				params: {
+					id: "123",
+				},
+			}, { status: 200, body: "OK" });
+
+			const request = createRequest({
+				method: "GET",
+				url: `${BASE_URL}/users/123/name/Alice`,
+			});
+
+			const response = await server.receive(request);
+			assert.strictEqual(response, undefined);
+		});
+		
+		it("should not match a route when URL parameters are missing", async () => {
+			server.get({
+				url: "/users/:id",
+				params: {
+					id: "123",
+				},
+			}, { status: 200, body: "OK" });
+
+			const request = createRequest({
+				method: "GET",
+				url: `${BASE_URL}/users`,
+			});
+
+			const response = await server.receive(request);
+			assert.strictEqual(response, undefined);
+		});
+		
+		it("should not match a route when URL parameters don't match", async () => {
+			server.get({
+				url: "/users/:id",
+				params: {
+					id: "123",
+				},
+			}, { status: 200, body: "OK" });
+
+			const request = createRequest({
+				method: "GET",
+				url: `${BASE_URL}/users/456`,
+			});
+
+			const response = await server.receive(request);
+			assert.strictEqual(response, undefined);
+		});
+	});
+	
 	describe("Headers", () => {
 		const methods = [
 			"get",

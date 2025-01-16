@@ -10,6 +10,7 @@ export interface RequestPattern {
 	url: string;
 	headers?: Record<string, string>;
 	query?: Record<string, string>;
+	params?: Record<string, string>;
 	body?: HttpBody;
 }
 

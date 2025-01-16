@@ -75,9 +75,15 @@ export class RequestMatcher {
 	
 	/**
 	 * The query string to match.
-	 * @type {Record<string, string>|undefined}
+	 * @type {Record<string, string> | undefined}
 	 */
 	#query;
+	
+	/**
+	 * The URL parameters to match.
+	 * @type {Record<string, string> | undefined}
+	 */
+	#params;
 
 	/**
 	 * Creates a new instance.
@@ -88,13 +94,15 @@ export class RequestMatcher {
 	 * @param {HttpBody} [options.body] The body to match.
 	 * @param {Record<string, string>} [options.headers] The headers to match.
 	 * @param {Record<string, string>} [options.query] The query string to match.
+	 * @param {Record<string, string>} [options.params] The URL parameters to match.
 	 */
-	constructor({ method, url, baseUrl, body = null, headers = {}, query }) {
+	constructor({ method, url, baseUrl, body = null, headers = {}, query, params }) {
 		this.#method = method;
 		this.#pattern = new URLPattern(url, baseUrl);
 		this.#body = body;
 		this.#headers = headers;
 		this.#query = query;
+		this.#params = params;
 	}
 
 	/**
@@ -109,7 +117,8 @@ export class RequestMatcher {
 		}
 
 		// then check the URL
-		if (!this.#pattern.test(request.url)) {
+		const urlMatch = this.#pattern.exec(request.url);
+		if (!urlMatch) {
 			return false;
 		}
 
@@ -125,6 +134,23 @@ export class RequestMatcher {
 			
 			for (const [key, value] of Object.entries(expectedQuery)) {
 				if (actualQuery[key] !== value) {
+					return false;
+				}
+			}
+		}
+		
+		// then check URL parameters
+		const expectedParams = this.#params;
+		
+		if (expectedParams) {
+			const actualParams = urlMatch.pathname.groups;
+			
+			if (!actualParams) {
+				return false;
+			}
+			
+			for (const [key, value] of Object.entries(expectedParams)) {
+				if (actualParams[key] !== value) {
 					return false;
 				}
 			}
