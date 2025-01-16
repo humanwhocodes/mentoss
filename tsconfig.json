@@ -1,0 +1,15 @@
+{
+  "files": ["src/index.js"],
+  "compilerOptions": {
+    "declaration": true,
+    "allowJs": true,
+    "checkJs": true,
+    "strict": true,
+    "target": "ES2022",
+    "lib": ["ESNext", "dom", "DOM.Iterable"],
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "outDir": "dist",
+    "types": []
+  }
+}

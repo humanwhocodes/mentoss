@@ -1,0 +1,74 @@
+{
+  "name": "mentoss",
+  "version": "0.0.0",
+  "description": "A utility to mock fetch requests and responses.",
+  "type": "module",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    "import": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=18.18"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "gitHooks": {
+    "pre-commit": "lint-staged"
+  },
+  "lint-staged": {
+    "*.js": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "!(*.js)": [
+      "prettier --write --ignore-unknown"
+    ]
+  },
+  "funding": {
+    "type": "github",
+    "url": "https://github.com/sponsors/nzakas"
+  },
+  "scripts": {
+    "build": "tsc",
+    "lint": "eslint src/ tests/",
+    "fmt": "prettier --write .",
+    "prepublishOnly": "npm run build",
+    "pretest": "npm run build",
+    "test:unit": "mocha tests/**/*.*",
+    "test:jsr": "npx jsr@latest publish --dry-run",
+    "test": "npm run test:unit"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/humanwhocodes/mentoss.git"
+  },
+  "keywords": [
+    "fetch",
+    "testing",
+    "mocha",
+    "jest"
+  ],
+  "author": "Nicholas C. Zaks",
+  "license": "Apache-2.0",
+  "devDependencies": {
+    "@eslint/js": "^9.0.0",
+    "@types/mocha": "^10.0.3",
+    "eslint": "^9.0.0",
+    "lint-staged": "15.2.1",
+    "mocha": "^10.3.0",
+    "prettier": "^3.3.3",
+    "typescript": "^5.6.3",
+    "yorkie": "2.0.0"
+  },
+  "dependencies": {
+    "urlpattern-polyfill": "^10.0.0"
+  }
+}
