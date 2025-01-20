@@ -1,0 +1,113 @@
+---
+title: How Routes Work
+description: What goes on under the hood when registering routes with a mock server
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+When you register a route with a mock server, you're telling the server how to respond to requests that match the route's pattern. This is done by creating a new route entry and adding it to the server's internal list of routes. When a request is made to the server, the server checks each route in order to see if the request matches the route's pattern. If a match is found, the server creates a new `Response` object based on the route's response pattern and returns it to the client. If no match is found, the server returns `undefined`.
+
+## How Routes are Matched
+
+Routes are matched based on information found in the request. The mock server then compares this information to each route's pattern to see if there's a match. Request details are matched in the following order:
+
+1. **Path**: The path of the request URL (e.g., `/api/users`)
+1. **Method**: The HTTP method of the request (e.g., `GET`, `POST`, `PUT`, `DELETE`, etc.)
+1. **URL Parameters**: The URL parameters of the request URL (e.g., 'id' in `/api/users/:id`)
+1. **Query Parameters**: The query parameters of the request URL (e.g., `?id=123`)
+1. **Headers**: The headers of the request (e.g., `Content-Type: application/json`)
+1. **Body**: The body of the request (e.g., JSON, form data, etc.)
+
+When a request is made to the server, the server checks each route in order to see if the request matches the route's pattern. If a match is found, the server creates a new `Response` object based on the route's response pattern and returns it to the client. If no match is found, the server returns `undefined`.
+
+<Aside type="note">
+
+If you don't specify a `query` object to match in the route, the server will ignore any query parameters in the request URL. That means `/api/users` matches both `/api/users` and `/api/users?sort=asc` because the query string is not part of the route pattern.
+
+</Aside>
+
+Here is an example:
+
+```js
+import { MockServer } from "mentoss";
+
+const server = new MockServer("https://api.example.com");
+
+server.get("/api/users/:id", 200);
+```
+
+This route will match any GET request to `/api/users/:id` and return a 200 status code. Here are some examples of requests that would match this route:
+
+- `GET /api/users/123`
+- `GET /api/users/456`
+- `GET /api/users/abc`
+- `GET /api/users/123?profile=full`
+
+In the last example, the query parameter `profile=full` is ignored because the route pattern does not include a query object to match. To match the query parameter, you would need to add a query object to the route pattern like this:
+
+```js
+server.get({
+    url: "/api/users/:id",
+    query: {
+        profile: "full"
+    }
+}, 200);
+```
+
+Now, the route will only match requests that include the query parameter `profile=full`. Here are some examples of requests that would match this route:
+
+- `GET /api/users/123?profile=full`
+- `GET /api/users/456?profile=full`
+- `GET /api/users/abc?profile=full`
+
+In this way, you can create routes that match specific requests based on the request's path, method, URL parameters, query parameters, headers, and body content.
+
+## Order of Route Matching
+
+When a request is made to the server, the server checks each route in the order they were added to see if the request matches the route's pattern. The mock server stops checking routes as soon as it finds a match, so the order in which you add routes matters. If you have multiple routes that could match a request, the first route that matches will be used to respond to the request. For example:
+
+```js
+import { MockServer } from "mentoss";
+
+const server = new MockServer("https://api.example.com");
+
+server.get("/api/users/:id", 200);
+server.get("/api/users/123", 204);
+```
+
+In this example, a `GET /api/users/123` request will return a 200 status code because the first route that matches is the one that responds with a 200 status code. If you want the second route to match first, you would need to add it before the first route.
+
+<Aside type="tip">
+
+If you know the exact URL that will be requested, it's best to hardcode that value. So instead of `/api/users/:id` you would use `/api/users/123` if you know the request will always be for user 123.
+
+</Aside>
+
+## Single-Use Routes
+
+When a route has been matched once, it is considered "used" and will not be considered for future requests. This means that a route can only match a single request. If you need a route to match multiple requests, you will need to create multiple routes with the same pattern. The idea behind single-use routes is to ensure that you are specifying exactly the behavior you want for each request and not accidentally reusing a route that should only match once. If you want to call the same route more than once, you can create multiple routes with the same pattern to handle each request. For example:
+
+```js
+import { MockServer } from "mentoss";
+
+const server = new MockServer("https://api.example.com");
+
+server.get("/api/users/:id", 200);
+server.get("/api/users/:id", 200);
+```
+
+In this example, the server will respond with a 200 status code for both `GET /api/users/123` and `GET /api/users/456` requests because there are two routes that match the request pattern. After both routes have been matched once, they will not be considered for future requests and the server will return `undefined` for any additional requests that match the pattern.
+
+Single-used routes are particularly helpful when you are making stateful changes, such as deleting a user. You can ensure that the route only matches once and that the server does not accidentally respond with a 200 status code for a second request that should have been a 404 status code. Here's an example:
+
+```js
+import { MockServer } from "mentoss";
+
+const server = new MockServer("https://api.example.com");
+
+server.get("/api/users/123", 200);
+server.delete("/api/users/123", 204);
+server.get("/api/users/123", 404);
+```
+
+In this example, the server will respond with a 200 status code for the first `GET /api/users/123` request, a 204 status code for the `DELETE /api/users/123` request, and a 404 status code for the second `GET /api/users/123` request. Assuming your test makes these requests in order, you can ensure that the server responds with the correct status code for each request and correctly mimics the behavior of a real API when a resource is deleted.
