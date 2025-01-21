@@ -122,6 +122,12 @@ export class Route {
 	 * @type {RequestMatcher}
 	 */
 	#matcher;
+	
+	/**
+	 * The full URL for the route.
+	 * @type {string}
+	 */
+	#url;
 
 	/**
 	 * Creates a new instance.
@@ -134,6 +140,7 @@ export class Route {
 		this.#request = request;
 		this.#response = response;
 		this.#matcher = new RequestMatcher({ baseUrl, ...request });
+		this.#url = new URL(request.url, baseUrl).href;
 	}
 
 	/**
@@ -143,6 +150,15 @@ export class Route {
 	 */
 	matches(request) {
 		return this.#matcher.matches(request);
+	}
+	
+	/**
+	 * Traces the details of the request to see why it doesn't match.
+	 * @param {RequestPattern} request The request to check.
+	 * @returns {{matches:boolean, messages:string[]}} The trace match result.
+	 */ 
+	traceMatches(request) {
+		return this.#matcher.traceMatches(request);
 	}
 
 	/**
@@ -201,7 +217,7 @@ export class Route {
 	 * @returns {string} The string representation of the route.
 	 */
 	toString() {
-		return `[Route: ${this.#request.method.toUpperCase()} ${this.#request.url} -> ${this.#response.status}]`;
+		return `[Route: ${this.#request.method.toUpperCase()} ${this.#url} -> ${this.#response.status}]`;
 	}
 }
 
@@ -348,6 +364,17 @@ export class MockServer {
 	 * @returns {Promise<Response|undefined>} The response to return.
 	 */
 	async receive(request, PreferredResponse = Response) {
+		return (await this.traceReceive(request, PreferredResponse)).response;
+	}
+	
+	/**
+	 * Traces the details of the request to see why it doesn't match.
+	 * @param {Request} request The request to check.
+	 * @param {typeof Response} [PreferredResponse] The Response constructor to use.
+	 * @returns {Promise<{response:Response|undefined,traces: Array<{route:Route, matches:boolean, messages:string[]}>}>} The trace match result.
+	 */
+	async traceReceive(request, PreferredResponse = Response) {
+		
 		// convert into a RequestPattern so each route doesn't have to read the body
 		const requestPattern = {
 			method: request.method,
@@ -356,22 +383,30 @@ export class MockServer {
 			query: Object.fromEntries(new URL(request.url).searchParams.entries()),
 			body: await getBody(request),
 		};
-
+		
+		const traces = [];
+	
 		/*
 		 * Search for the first route that matches the request and return
 		 * the response. When there's a match, remove the route from the
 		 * list of routes so it can't be matched again.
 		 */
+
 		for (let i = 0; i < this.#unmatchedRoutes.length; i++) {
 			const route = this.#unmatchedRoutes[i];
-			if (route.matches(requestPattern)) {
+			const trace = route.traceMatches(requestPattern);
+			
+			if (trace.matches) {
 				this.#unmatchedRoutes.splice(i, 1);
 				this.#matchedRoutes.push(route);
-				return route.createResponse(PreferredResponse);
+				return { response: route.createResponse(PreferredResponse), traces };
 			}
+			
+			traces.push({ ...trace, route });
 		}
-
-		return undefined;
+		
+		return { response: undefined, traces };
+		
 	}
 
 	/**
