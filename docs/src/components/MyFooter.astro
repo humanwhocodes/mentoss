@@ -1,0 +1,9 @@
+---
+import DefaultFooter from '@astrojs/starlight/components/Footer.astro';
+import type { Props } from '@astrojs/starlight/props';
+---
+<DefaultFooter {...Astro.props} />
+
+<footer>
+    Copyright © {new Date().getFullYear()} Nicholas C. Zakas. Apache 2.0 License.
+</footer>

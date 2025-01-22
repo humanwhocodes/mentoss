@@ -1,0 +1,119 @@
+---
+title: Extended Request Patterns
+description: Learn how to use extended request patterns with a mock server
+---
+
+The first argument of any route method in a `MockServer` instance is the request pattern. This pattern can be a string or a an object with additional fields to match. This allows you to create more complex routes that match specific requests, which is useful when you have many requests that differ only slightly from each other.
+
+## Extended request pattern keys
+
+The following keys can be used in the request pattern object:
+
+* `url` (required) - the URL to match.
+* `query` - query string parameters to match. Note that any URL containing all of the query string parameters is considered a match, even if the URL contains more query string parameters then are mentioned in the request pattern.
+* `params` - URL parameters to match. Used when the URL contains placeholders such as `:userId`.
+* `headers` - HTTP headers to match. Similar to `query`, a request containing all headers in the request pattern is considered a match even if the request contains additional headers.
+* `body` - the body of the request to match. This can be a string, `FormData`, or an object (in which case it's treated as JSON). For objects and `FormData`, the matching works similar to `query` and `headers`.
+
+You can use any combination of these keys to create a request pattern that matches the requests to which you'd like to respond.
+
+## Matching a URL with query parameters
+
+If you'd like to match a URL that contains specific query parameters, you can use the `query` key in the request pattern object. Here's an example:
+
+```js
+import { MockServer } from "mentoss";
+
+const server = new MockServer("https://api.example.com");
+
+server.get({
+    url: "/users",
+    query: {
+        userId: "123"
+    }
+}, 200);
+```
+
+This route will match any GET request to `/users` that contains a query parameter `userId` with the value `123`. For example, a request to `https://api.example.com/users?userId=123` will match this route.
+
+## Matching a URL with URL parameters
+
+If you'd like to match a URL that contains URL parameters, you can use the `params` key in the request pattern object. Here's an example:
+
+```js
+import { MockServer } from "mentoss";
+
+const server = new MockServer("https://api.example.com");
+
+server.get({
+    url: "/users/:userId",
+    params: {
+        userId: "123"
+    }
+}, 200);
+```
+
+This route will match any GET request to `/users/:userId` where the `userId` parameter is `123`. For example, a request to `https://api.example.com/users/123` will match this route but a request to `https://api.example.com/users/456` will not.
+
+## Matching a request with specific headers
+
+If you'd like to match a request that contains specific headers, you can use the `headers` key in the request pattern object. Here's an example:
+
+```js
+import { MockServer } from "mentoss";
+
+const server = new MockServer("https://api.example.com");
+
+server.get({
+    url: "/users",
+    headers: {
+        "Authorization": "Bearer token"
+    }
+}, 200);
+```
+
+This route will match any GET request to `/users` that contains an `Authorization` header with the value `Bearer token`.
+
+## Matching a request with a specific body
+
+If you'd like to match a request that contains a specific body, you can use the `body` key in the request pattern object. Here's an example:
+
+```js
+import { MockServer } from "mentoss";
+
+const server = new MockServer("https://api.example.com");
+
+server.post({
+    url: "/users",
+    body: {
+        name: "John Doe"
+    }
+}, 200);
+```
+
+This route will match any POST request to `/users` that contains a JSON body with the `name` property set to `John Doe`. There's no need to set a specific `Content-Type` header; the matching is done based on the body content.
+
+## Match multiple request patterns
+
+You can use any combination of the keys above to create a request pattern that matches the requests you'd like to respond to. For example, you can match a request that contains specific query parameters, URL parameters, headers, and body content.
+
+```js
+import { MockServer } from "mentoss";
+
+const server = new MockServer("https://api.example.com");
+
+server.post({
+    url: "/users/:userId",
+    params: {
+        userId: "123"
+    },
+    headers: {
+        "Content-Type": "application/json",
+    },
+    body: {
+        name: "John Doe"
+    }
+}, 200);
+```
+
+This route will match any POST request to `/users/:userId` where the `userId` parameter is `123`, the request contains a `Content-Type` header with the value `application/json`, and the request body is a JSON object with the `name` property set to `John Doe`.

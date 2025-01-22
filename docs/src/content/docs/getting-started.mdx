@@ -1,0 +1,122 @@
+---
+title: Getting Started
+description: Get up and running with Mentoss quickly
+---
+
+import { Tabs, TabItem, Steps } from '@astrojs/starlight/components';
+
+Mentoss is a utility for mocking JavaScript `fetch()` requests both in the browser and on server runtimes like [Node.js](https://nodejs.org), [Deno](https://deno.com), and [Bun](https://bun.sh). All of these environments have a global `fetch()` function capable of making HTTP requests. When testing your JavaScript code, you don't want to make network requests, so Mentoss is used to simulate those requests and their responses.
+
+<Steps>
+
+1. **Install Mentoss.** If you're using Mentoss in a server-side runtime, you can install it using the package manager of your choice.
+
+    <Tabs>
+        <TabItem label="npm">
+        <Fragment>
+        ```bash title="Install Dependencies"
+        npm install mentoss -D
+        ```
+        </Fragment>
+        </TabItem>
+        <TabItem label="pnpm">
+        <Fragment>
+        ```bash title="Install Dependencies"
+        pnpm add mentoss -D
+        ```
+        </Fragment>
+        </TabItem>
+        <TabItem label="yarn">
+        <Fragment>
+        ```bash title="Install Dependencies"
+        yarn add mentoss -D
+        ```
+        </Fragment>
+        </TabItem>
+        <TabItem label="Bun">
+        <Fragment>
+        ```bash title="Install Dependencies"
+        bun install mentoss -D
+        ```
+        </Fragment>
+        </TabItem>
+    </Tabs>
+
+2. **Create a mock server.** Import the `MockServer` constructor from Mentoss and create a new instance like this:
+
+    ```js
+    import { MockServer } from "mentoss";
+
+    const server = new MockServer("https://api.example.com");
+    ```
+
+    The `server` object is where you can set up the routes that you want to mock. For example:
+
+    ```js {6}
+    import { MockServer } from "mentoss";
+
+    const server = new MockServer("https://api.example.com");
+
+    // example route
+    server.get("/ping", 200);
+    ```
+
+    This example creates a route of `/ping` that returns a 200 status when called.
+
+    Mock servers can specify routes in a number of different ways. See XXX for more details.
+
+3. **Create a fetch mocker.** A `FetchMocker` instance is used to create a mocked version of the `fetch()` function. To create a fetch mocker, import the `FetchMocker` constructor and specify the server(s) you want to use:
+
+    ```js {1,5-7}
+    import { MockServer, FetchMocker } from "mentoss";
+
+    const server = new MockServer("https://api.example.com");
+
+    const mocker = new FetchMocker({
+        servers: [server]
+    });
+    ```
+
+    Once you have a fetch mocker created, it's time to use the mocked `fetch()` function.
+
+4. **Use the mocked `fetch()` function.** Call `mockGlobal()` and then use `fetch()` as you normally would:
+
+    ```js
+    import { MockServer, FetchMocker } from "mentoss";
+    import { expect } from "chai";
+
+    describe("My API", () => {
+        let mocker;
+
+        const server = new MockServer("https://api.example.com");
+        mocker = new FetchMocker({
+            servers: [server]
+        });
+        
+        before(() => {
+            mocker.mockGlobal();
+        });
+        
+        // reset the server after each test
+        afterEach(() => {
+            server.clear();
+        });
+        
+        after(() => {
+            mocker.unmockGlobal();
+        });
+
+        it("should return a 200 status code", async () => {
+
+            // set up the route to test
+            server.get("/ping", 200);
+
+            // make the request
+            const response = await fetch("https://api.example.com/ping");
+            
+            // check the response
+            expect(response.status).to.equal(200);
+        });
+    });
+    ```
+</Steps>
