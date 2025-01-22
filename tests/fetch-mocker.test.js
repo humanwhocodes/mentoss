@@ -17,6 +17,59 @@ import { FetchMocker } from "../src/fetch-mocker.js";
 
 const BASE_URL = "https://api.example.com";
 
+const NO_ROUTE_MATCHED_NO_PARTIAL_MATCHES = `
+No route matched for GET https://api.example.com/goodbye.
+
+Full Request:
+
+GET https://api.example.com/goodbye
+
+Partial matches:
+
+No partial matches found.`.trim();
+
+const NO_ROUTE_MATCHED_TWO_PARTIAL_MATCHES = `
+No route matched for GET https://api.example.com/user/settings.
+
+Full Request:
+
+GET https://api.example.com/user/settings
+
+Partial matches:
+
+🚧 [Route: GET https://api.example.com/user/:id -> 200]:
+  ✅ URL matches.
+  ✅ Method matches: GET.
+  ❌ URL parameters do not match. Expected id=1 but received id=settings.
+
+🚧 [Route: GET https://api.example.com/user/settings -> 200]:
+  ✅ URL matches.
+  ✅ Method matches: GET.
+  ❌ Query string does not match. Expected page=profile but received page=undefined.`.trim();
+  
+const NO_ROUTE_MATCHED_HEADERS_BODY = `
+No route matched for POST https://api.example.com/user/settings.
+
+Full Request:
+
+POST https://api.example.com/user/settings
+Authorization: Bearer XYZ
+Content-Type: application/json
+
+{"name":"value"}
+
+Partial matches:
+
+🚧 [Route: POST https://api.example.com/user/:id -> 200]:
+  ✅ URL matches.
+  ✅ Method matches: POST.
+  ❌ URL parameters do not match. Expected id=1 but received id=settings.
+
+🚧 [Route: POST https://api.example.com/user/settings -> 200]:
+  ✅ URL matches.
+  ✅ Method matches: POST.
+  ❌ Headers do not match. Expected authorization=Bearer ABC but received authorization=Bearer XYZ.`.trim();
+
 //-----------------------------------------------------------------------------
 // Tests
 //-----------------------------------------------------------------------------
@@ -117,7 +170,7 @@ describe("FetchMocker", () => {
 		assert.deepStrictEqual(body, "Hello world!");
 	});
 
-	it("should throw an error when there is no route match", async () => {
+	it("should throw an error when there is no route match and no partial matches", async () => {
 		const server = new MockServer(BASE_URL);
 		const fetchMocker = new FetchMocker({
 			servers: [server],
@@ -127,10 +180,62 @@ describe("FetchMocker", () => {
 			status: 200,
 			body: "Hello world!",
 		});
-
+		
 		await assert.rejects(fetchMocker.fetch(BASE_URL + "/goodbye"), {
 			name: "Error",
-			message: "No route matched for GET https://api.example.com/goodbye",
+			message: NO_ROUTE_MATCHED_NO_PARTIAL_MATCHES,
+		});
+	});
+	
+	it("should throw an error when there is no route match and two partial matches", async () => {
+		const server = new MockServer(BASE_URL);
+		const fetchMocker = new FetchMocker({
+			servers: [server],
+		});
+
+		server.get({
+			url: "/user/:id",
+			params: { id: "1" },
+		}, 200);
+		
+		server.get({
+			url: "/user/settings",
+			query: { page: "profile" },
+		}, 200);
+		
+		await assert.rejects(fetchMocker.fetch(BASE_URL + "/user/settings"), {
+			name: "Error",
+			message: NO_ROUTE_MATCHED_TWO_PARTIAL_MATCHES,
+		});
+	});
+	
+	it("should throw an error when there is no route match and two partial matches with headers and body", async () => {
+		const server = new MockServer(BASE_URL);
+		
+		const fetchMocker = new FetchMocker({
+			servers: [server],
+		});
+		
+		server.post({
+			url: "/user/:id",
+			params: { id: "1" },
+		}, 200);
+		
+		server.post({
+			url: "/user/settings",
+			headers: { Authorization: "Bearer ABC" },
+		}, 200);
+		
+		await assert.rejects(fetchMocker.fetch(BASE_URL + "/user/settings", {
+			method: "POST",
+			headers: {
+				"Authorization": "Bearer XYZ",
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({ name: "value" }),
+		}), {
+			name: "Error",
+			message: NO_ROUTE_MATCHED_HEADERS_BODY,
 		});
 	});
 

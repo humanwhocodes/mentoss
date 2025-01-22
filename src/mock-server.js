@@ -11,6 +11,7 @@
 
 import { RequestMatcher } from "./request-matcher.js";
 import { statusTexts } from "./http.js";
+import { getBody } from "./util.js";
 
 //-----------------------------------------------------------------------------
 // Type Definitions
@@ -18,6 +19,13 @@ import { statusTexts } from "./http.js";
 
 /** @typedef {import("./types.js").RequestPattern} RequestPattern */
 /** @typedef {import("./types.js").ResponsePattern} ResponsePattern */
+
+/**
+ * @typedef {Object} Trace
+ * @property {Route} route The route that was checked.
+ * @property {boolean} matches Whether the route matches the request.
+ * @property {string[]} messages The messages explaining why the route doesn't match.
+ */
 
 //-----------------------------------------------------------------------------
 // Helpers
@@ -61,44 +69,6 @@ export function assertValidRequestPattern(requestPattern) {
 			);
 		}
 	}
-}
-
-/**
- * Reads the body from a request based on the HTTP headers.
- * @param {Request} request The request to read the body from.
- * @returns {Promise<string|any|FormData|null>} The body of the request.
- */
-function getBody(request) {
-	// first get the content type
-	const contentType = request.headers.get("content-type");
-
-	// if there's no content type, there's no body
-	if (!contentType) {
-		return Promise.resolve(null);
-	}
-
-	// if it's a text format then return a string
-	if (contentType.startsWith("text")) {
-		return request.text();
-	}
-
-	// if the content type is JSON, parse the body as JSON
-	if (contentType.startsWith("application/json")) {
-		return request.json();
-	}
-
-	// if the content type is form data, parse the body as form data
-	if (contentType.startsWith("multipart/form-data")) {
-		return request.formData();
-	}
-
-	// if the content type is URL-encoded, parse the body as URL-encoded
-	if (contentType.startsWith("application/x-www-form-urlencoded")) {
-		return request.formData();
-	}
-
-	// otherwise return the body as bytes
-	return request.arrayBuffer();
 }
 
 /**
@@ -165,10 +135,10 @@ export class Route {
 	 * Creates a Response object from a route's response pattern. If the body
 	 * is an object then the response will be JSON; if the body is a string
 	 * then the response will be text; otherwise the response will be bytes.
-	 * @param {typeof Response} PrefferedResponse The Response constructor to use.
+	 * @param {typeof Response} PreferredResponse The Response constructor to use.
 	 * @returns {Response} The response to return.
 	 */
-	createResponse(PrefferedResponse) {
+	createResponse(PreferredResponse) {
 		const { body, ...init } = this.#response;
 
 		if (!init.status) {
@@ -179,7 +149,7 @@ export class Route {
 
 		// if the body is an object, return JSON
 		if (typeof body === "object") {
-			return new PrefferedResponse(JSON.stringify(body), {
+			return new PreferredResponse(JSON.stringify(body), {
 				...init,
 				statusText,
 				headers: {
@@ -191,7 +161,7 @@ export class Route {
 
 		// if the body is a string, return text
 		if (typeof body === "string") {
-			return new PrefferedResponse(body, {
+			return new PreferredResponse(body, {
 				...init,
 				statusText,
 				headers: {
@@ -202,7 +172,7 @@ export class Route {
 		}
 
 		// otherwise return the body as bytes
-		return new PrefferedResponse(body, {
+		return new PreferredResponse(body, {
 			...init,
 			statusText,
 			headers: {
@@ -371,7 +341,7 @@ export class MockServer {
 	 * Traces the details of the request to see why it doesn't match.
 	 * @param {Request} request The request to check.
 	 * @param {typeof Response} [PreferredResponse] The Response constructor to use.
-	 * @returns {Promise<{response:Response|undefined,traces: Array<{route:Route, matches:boolean, messages:string[]}>}>} The trace match result.
+	 * @returns {Promise<{response:Response|undefined,traces: Array<Trace>}>} The trace match result.
 	 */
 	async traceReceive(request, PreferredResponse = Response) {
 		

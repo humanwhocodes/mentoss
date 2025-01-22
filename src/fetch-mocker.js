@@ -7,6 +7,8 @@
 // Imports
 //-----------------------------------------------------------------------------
 
+import { stringifyRequest } from "./util.js";
+
 //-----------------------------------------------------------------------------
 // Type Definitions
 //-----------------------------------------------------------------------------
@@ -14,6 +16,40 @@
 /** @typedef {import("./types.js").RequestPattern} RequestPattern */
 /** @typedef {import("./types.js").ResponsePattern} ResponsePattern */
 /** @typedef {import("./mock-server.js").MockServer} MockServer */
+/** @typedef {import("./mock-server.js").Trace} Trace */
+
+//-----------------------------------------------------------------------------
+// Helpers
+//-----------------------------------------------------------------------------
+
+/**
+ * Formats a message for when no route is matched.
+ * @param {Request} request The request that wasn't matched.
+ * @param {string|any|FormData|null} body The body of the request.
+ * @param {Trace[]} traces The traces from the servers.
+ * @returns {string} The formatted message.
+ */
+function formatNoRouteMatchedMessage(request, body, traces) {
+	
+	return `No route matched for ${request.method} ${request.url}.
+
+Full Request:
+
+${stringifyRequest(request, body)}
+
+Partial matches:
+
+${traces.map(trace => {
+	
+	let traceMessage = `🚧 ${trace.route.toString()}:`;
+		
+	trace.messages.forEach(message => {
+		traceMessage += `\n  ${message}`;
+	});
+	
+	return traceMessage;
+}).join("\n\n") || "No partial matches found."}`;
+}
 
 //-----------------------------------------------------------------------------
 // Exports
@@ -72,6 +108,7 @@ export class FetchMocker {
 		// create the function here to bind to `this`
 		this.fetch = async (input, init) => {
 			const request = new this.#Request(input, init);
+			const allTraces = [];
 
 			/*
 			 * Note: Each server gets its own copy of the request so that it
@@ -79,19 +116,27 @@ export class FetchMocker {
 			 */
 			for (const server of this.#servers) {
 				const requestClone = request.clone();
-				const response = await server.receive(
+				const { response, traces } = await server.traceReceive(
 					requestClone,
 					this.#Response,
 				);
+				
 				if (response) {
 					return response;
 				}
+				
+				allTraces.push(...traces);
 			}
+			
+			/*
+			 * To find possible traces, filter out all of the traces that only
+			 * have one message. This is because a single message means that
+			 * the URL wasn't matched, so there's no point in reporting that.
+			 */
+			const possibleTraces = allTraces.filter(trace => trace.messages.length > 1);
 
 			// throw an error saying the route wasn't matched
-			throw new Error(
-				`No route matched for ${request.method} ${request.url}`,
-			);
+			throw new Error(formatNoRouteMatchedMessage(request, init?.body, possibleTraces));
 		};
 	}
 
