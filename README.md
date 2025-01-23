@@ -8,6 +8,10 @@ If you find this useful, please consider supporting my work with a [donation](ht
 
 A utility for mocking out `fetch()` requests and responses.
 
+## Documentation
+
+See the [website](https://mentoss.dev).
+
 ## Installation
 
 ```shell
@@ -94,3 +98,51 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
+
+## Development
+
+To work on Mentoss, you'll need:
+
+* [Git](https://git-scm.com/)
+* [Node.js](https://nodejs.org)
+
+Make sure both are installed by visiting the links and following the instructions to install.
+
+Now you're ready to clone the repository:
+
+```bash
+git clone https://github.com/humanwhocodes/mentoss.git
+```
+
+Then, enter the directory and install the dependencies:
+
+```bash
+cd mentoss
+npm install
+```
+
+After that, you can run the tests via:
+
+```bash
+npm test
+```
+
+## Prior Art
+
+This project takes inspiration (but not code) from a number of other projects:
+
+* [Fetch Mock](https://www.wheresrhys.co.uk/fetch-mock/)
+* [MSW](https://mswjs.io/)
+
+## License
+
+Apache 2.0
+
+## Frequently Asked Questions
+
+### What does "Mentoss" even mean?
+
+One day, I was sitting around thinking, "you know, I really wish there was a better fetch mocker." Then I thought, "fetch mocker" sounds a lot like "fresh maker," like the [old Mentos commercial](https://www.youtube.com/watch?v=JqgqgcE8Zck). Then I thought, you can't just name a package "fetch mocker" because it's too generic. I'd like to call it Mentos as a joke, but then I worried about the company coming after me for trademark infringement. So I figured I'd add an "s" at the end, to make "OSS" the suffix.
+
+[npm]: https://npmjs.com/
+[yarn]: https://yarnpkg.com/
