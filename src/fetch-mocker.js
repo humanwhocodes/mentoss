@@ -8,6 +8,7 @@
 //-----------------------------------------------------------------------------
 
 import { stringifyRequest } from "./util.js";
+import { isCorsSimpleRequest, CORS_ALLOW_ORIGIN } from "./http.js";
 
 //-----------------------------------------------------------------------------
 // Type Definitions
@@ -80,6 +81,37 @@ function createBaseUrl(baseUrl) {
 	return new URL(baseUrl);
 }
 
+/**
+ * Determines if two URL are of the same origin based on the same origin
+ * policy instituted by browsers.
+ * @param {URL} requestUrl The URL of the request.
+ * @param {URL} baseUrl The base URL to compare against.
+ * @returns {boolean} `true` if the URLs are of the same origin, `false` otherwise.
+ */
+function isSameOrigin(requestUrl, baseUrl) {
+	return requestUrl.origin === baseUrl.origin;
+}
+
+/**
+ * Asserts that the response has the correct CORS headers.
+ * @param {Response} response The response to check.
+ * @param {string} origin The origin to check against.
+ * @returns {void}
+ * @throws {Error} When the response doesn't have the correct CORS headers.
+ */
+function assertCorsResponse(response, origin) {
+	
+	const originHeader = response.headers.get(CORS_ALLOW_ORIGIN);
+
+	if (!originHeader) {
+		throw new Error(`Access to fetch at '${response.url}' from origin '${origin}' has been blocked by CORS policy: Response to preflight request doesn't pass access control check: No 'Access-Control-Allow-Origin' header is present on the requested resource.`);
+	}
+	
+	if (originHeader !== "*" && originHeader !== origin) {
+		throw new Error(`Access to fetch at '${response.url}' from origin '${origin}' has been blocked by CORS policy: The 'Access-Control-Allow-Origin' header has a value '${originHeader}' that is not equal to the supplied origin.`);
+	}
+}
+	
 //-----------------------------------------------------------------------------
 // Exports
 //-----------------------------------------------------------------------------
@@ -153,6 +185,39 @@ export class FetchMocker {
 			
 			const request = new this.#Request(fixedInput, init);
 			const allTraces = [];
+			let useCors = false;
+			
+			// if there's a base URL then we need to check for CORS
+			if (this.#baseUrl) {
+				const requestUrl = new URL(request.url);
+				
+				if (!isSameOrigin(requestUrl, this.#baseUrl)) {
+					
+					useCors = true;
+					
+					// add the origin header to the request
+					request.headers.append("origin", this.#baseUrl.origin);
+					
+					// if it's not a simple request then we'll need a preflight check
+					if (!isCorsSimpleRequest(request)) {
+						// const preflightRequest = new this.#Request(request.url, {
+						// 	method: "OPTIONS",
+						// 	headers:{
+						// 		"Access-Control-Request-Method": request.method,
+						// 		"Access-Control-Request-Headers": [...request.headers.keys()].join(","),
+						// 		"origin": this.#baseUrl.origin,
+						// 	},
+						// });
+						
+						// const preflightResponse = await this.fetch(preflightRequest);
+						
+						// if (preflightResponse.status >= 400) {
+						// 	throw new Error(`Request to ${requestUrl.origin} from ${this.#baseUrl.origin} is blocked by CORS policy.`);
+					}
+					
+					// if the preflight response is successful, then we can make the actual request
+				}
+			}
 
 			/*
 			 * Note: Each server gets its own copy of the request so that it
@@ -166,6 +231,11 @@ export class FetchMocker {
 				);
 				
 				if (response) {
+					
+					if (useCors && this.#baseUrl) {
+						assertCorsResponse(response, this.#baseUrl.origin);
+					}	
+					
 					return response;
 				}
 				

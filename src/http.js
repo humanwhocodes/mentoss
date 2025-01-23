@@ -3,6 +3,10 @@
  * @author Nicholas C. Zakas
  */
 
+//-----------------------------------------------------------------------------
+// Data
+//-----------------------------------------------------------------------------
+
 export const statusTexts = new Map([
     [100, "Continue"],
     [101, "Switching Protocols"],
@@ -67,3 +71,120 @@ export const statusTexts = new Map([
     [510, "Not Extended"],
     [511, "Network Authentication Required"]
 ]);
+
+// the methods allowed for simple requests
+const corsSimpleMethods = new Set(["GET", "HEAD", "POST"]);
+
+// the headers allowed for simple requests
+const coreSimpleHeaders = new Set([
+    "accept",
+    "accept-language",
+    "content-language",
+    "content-type",
+    "range"
+]);
+
+// the content types allowed for simple requests
+const corsSimpleContentTypes = new Set([
+    "application/x-www-form-urlencoded",
+    "multipart/form-data",
+    "text/plain"
+]);
+
+export const CORS_ALLOW_ORIGIN = "Access-Control-Allow-Origin";
+export const CORS_ALLOW_CREDENTIALS = "Access-Control-Allow-Credentials";
+export const CORS_EXPOSE_HEADERS = "Access-Control-Expose-Headers";
+export const CORS_ALLOW_METHODS = "Access-Control-Allow-Methods";
+export const CORS_ALLOW_HEADERS = "Access-Control-Allow-Headers";
+export const CORS_MAX_AGE = "Access-Control-Max-Age";
+
+
+//-----------------------------------------------------------------------------
+// Helpers
+//-----------------------------------------------------------------------------
+
+/**
+ * Checks if a Range header value is a simple range according to the Fetch API spec.
+ * @see https://fetch.spec.whatwg.org/#http-headers
+ * @param {string} range The range value to check.
+ * @returns {boolean} `true` if the range is a simple range, `false` otherwise.
+ */
+function isSimpleRangeHeader(range) {
+    
+    // range must start with "bytes="
+    if (!range.startsWith("bytes=")) {
+        return false;
+    }
+    
+    const ranges = range.slice(6).split(",");
+    
+    // only one range is allowed
+    if (ranges.length > 1) {
+        return false;
+    }
+    
+    // range should be in the format 0-255, -255, or 0-
+    const rangeParts = ranges[0].split("-");
+    
+    if (rangeParts.length > 2) {
+        return false;
+    }
+    
+    const firstIsNumber = /^\d+/.test(rangeParts[0]);
+    const secondIsNumber = /^\d+/.test(rangeParts[1]);
+    
+    // if the first part is missing, the second must be a number
+    if (rangeParts[0] === "") {
+        return secondIsNumber;
+    }
+    
+    // if the second part is missing, the first must be a number
+    if (rangeParts[1] === "") {
+        return firstIsNumber;
+    }
+    
+    // if both parts are present, they must both be numbers
+    return firstIsNumber && secondIsNumber;
+}
+
+//-----------------------------------------------------------------------------
+// Exports
+//-----------------------------------------------------------------------------
+
+/**
+ * Determines if a request is a simple CORS request.
+ * @param {Request} request The request to check.
+ * @returns {boolean} `true` if the request is a simple CORS request, `false` otherwise.
+ */
+export function isCorsSimpleRequest(request) {
+    
+    // if it's not a simple method then it's not a simple request
+    if (!corsSimpleMethods.has(request.method)) {
+        return false;
+    }
+ 
+    // check all headers to ensure they're allowed
+    const headers = request.headers;
+    
+    for (const header of headers.keys()) {
+        if (!coreSimpleHeaders.has(header)) {
+            return false;
+        }
+    }
+    
+    // check the content type
+    const contentType = headers.get("content-type");
+    
+    if (contentType && !corsSimpleContentTypes.has(contentType)) {
+        return false;
+    }
+    
+    // check the Range header
+    const range = headers.get("range");
+    
+    if (range && !isSimpleRangeHeader(range)) {
+        return false;
+    }
+    
+    return true;
+}

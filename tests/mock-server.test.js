@@ -226,6 +226,18 @@ describe("MockServer", () => {
 			const secondResponse = await server.receive(request);
 			assert.strictEqual(secondResponse, undefined);
 		});
+		
+		it("should match a route and the response object should have a URL that matches the request", async () => {
+			server.get("/test", { status: 200, body: "OK" });
+
+			const request = createRequest({
+				method: "GET",
+				url: `${BASE_URL}/test?foo=bar`,
+			});
+
+			const response = await server.receive(request);
+			assert.strictEqual(response.url, `${BASE_URL}/test?foo=bar`);
+		});
 	});
 	
 	describe("traceReceive()", () => {

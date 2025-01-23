@@ -16,6 +16,7 @@ import { FetchMocker } from "../src/fetch-mocker.js";
 //-----------------------------------------------------------------------------
 
 const BASE_URL = "https://api.example.com";
+const ALT_BASE_URL = "https://api.example.org";
 
 const NO_ROUTE_MATCHED_NO_PARTIAL_MATCHES = `
 No route matched for GET https://api.example.com/goodbye.
@@ -354,5 +355,27 @@ describe("FetchMocker", () => {
 			const response = await fetchMocker.fetch("/hello");
 			assert.strictEqual(response.status, 200);
 		});
+	});
+	
+	describe("CORS", () => {
+		
+		describe("Simple Requests", () => {
+			it("should throw an error when the server does not return an access-control-allow-origin header", async () => {
+				const server = new MockServer(BASE_URL);
+				const fetchMocker = new FetchMocker({ servers: [server], baseUrl: ALT_BASE_URL });
+				const url = new URL("/hello", BASE_URL);
+				const origin = new URL(ALT_BASE_URL).origin;
+				
+				server.get("/hello", 200);
+				
+				await assert.rejects(fetchMocker.fetch(url), {
+					name: "Error",
+					message: `Access to fetch at '${url.href}' from origin '${origin}' has been blocked by CORS policy: Response to preflight request doesn't pass access control check: No 'Access-Control-Allow-Origin' header is present on the requested resource.`
+				});
+			});
+
+
+		});
+		
 	});
 });

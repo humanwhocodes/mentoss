@@ -369,7 +369,15 @@ export class MockServer {
 			if (trace.matches) {
 				this.#unmatchedRoutes.splice(i, 1);
 				this.#matchedRoutes.push(route);
-				return { response: route.createResponse(PreferredResponse), traces };
+				
+				/*
+				 * Response constructor doesn't allow setting the URL so we
+				 * need to set it after creating the response.
+				 */
+				const response = route.createResponse(PreferredResponse);
+				Object.defineProperty(response, "url", { value: request.url });
+				
+				return { response, traces };
 			}
 			
 			traces.push({ ...trace, route });
