@@ -4,7 +4,7 @@
   "packages": {
     ".": {
       "release-type": "node",
-      "release-as": "0.1.0",
+      "release-as": "0.1.2",
       "extra-files": [
         {
           "type": "json",
