@@ -1,0 +1,59 @@
+---
+title: Mocking Browser Requests
+description: Learn how to mock browser requests using Mentoss
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+The global `fetch()` function is available in many JavaScript runtimes, including server-side runtimes and web browsers. While `fetch()` works similarly in both environments, there are some important differences to take into account when testing code that uses `fetch()` in a browser environment. 
+
+## Relative URLs with `fetch()`
+
+Perhaps the most significant difference between using `fetch()` in a browser as opposed to a server environment is how relative URLs are handled. When you use `fetch()` in a browser, relative URLs are resolved relative to the current page's URL. This means that if you call `fetch("/api/data")` from a page at `https://example.com/page`, the request will be made to `https://example.com/api/data`. This happens automatically in the browser whenever you use `fetch()`, ensuring that requests go to the correct server.
+
+If you try to use a relative URL with `fetch()` in a server-side environment, you'll get an error. This is because the server doesn't know what the base URL should be, so it can't resolve the relative URL. That means the same `fetch()` call that works in the browser won't work in a server environment and it's important to keep that in mind when writing tests.
+
+## Mocking Browser Requests with Mentoss
+
+Mentoss provides a way to mock browser requests in your tests, allowing you to test code that uses `fetch()` without making actual network requests. To mock a browser request, you can provide a `baseUrl` option to the `FetchMocker` constructor. This option specifies the base URL that relative URLs should be resolved against. You can then call a mocked `fetch()` using a relative URL. Here's an example:
+
+```js {10, 26-27}
+import { MockServer, FetchMocker } from "mentoss";
+import { expect } from "chai";
+
+const BASE_URL = "https://api.example.com";
+
+describe("My API", () => {
+    const server = new MockServer(BASE_URL);
+    const mocker = new FetchMocker({
+        servers: [server],
+        baseUrl: BASE_URL
+    });
+
+    // extract the fetch function
+    const myFetch = mocker.fetch;
+
+    // reset the server after each test
+    afterEach(() => {
+        server.clear();
+    });
+    
+    it("should return a 200 status code", async () => {
+
+        // set up the route to test
+        server.get("/ping", 200);
+
+        // make the request
+        const response = await myFetch("/ping");
+        
+        // check the response
+        expect(response.status).to.equal(200);
+    });
+});
+```
+
+In this example, the `baseUrl` option is set to `"https://api.example.com"`, which means that relative URLs will be resolved against that base URL. The test then calls `myFetch("/ping")`, which resolves to `"https://api.example.com/ping"` and makes a request to the server. This allows you to test code that uses relative URLs with `fetch()` in a browser-like environment.
+
+<Aside type="caution">
+When using the `baseUrl` option with `FetchMocker`, make sure to set it to the correct base URL for your mock server. If you don't have a mock server defined for the base URL, the request will fail.
+</Aside>

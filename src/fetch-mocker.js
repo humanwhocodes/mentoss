@@ -51,6 +51,35 @@ ${traces.map(trace => {
 }).join("\n\n") || "No partial matches found."}`;
 }
 
+/**
+ * Creates a base URL from a URL or string. This is also validates
+ * the URL to ensure it's valid. Empty strings are invalid.
+ * @param {string|URL|undefined} baseUrl The base URL to create.
+ * @returns {URL|undefined} The created base URL.
+ * @throws {TypeError} When the base URL is an empty string.
+ * @throws {TypeError} When the base URL is not a string or URL.
+ */
+function createBaseUrl(baseUrl) {
+	
+	if (baseUrl === undefined) {
+		return undefined;
+	}
+	
+	if (baseUrl === "") {
+		throw new TypeError("Base URL cannot be an empty string.");
+	}
+	
+	if (baseUrl instanceof URL) {
+		return baseUrl;
+	}
+
+	if (typeof baseUrl !== "string") {
+		throw new TypeError("Base URL must be a string or URL object.");
+	}
+	
+	return new URL(baseUrl);
+}
+
 //-----------------------------------------------------------------------------
 // Exports
 //-----------------------------------------------------------------------------
@@ -76,6 +105,12 @@ export class FetchMocker {
 	 * @type {typeof Request}
 	 */
 	#Request;
+	
+	/**
+	 * The base URL to use for relative URLs.
+	 * @type {URL|undefined}
+	 */
+	#baseUrl;
 
 	/**
 	 * The global fetch function.
@@ -93,21 +128,30 @@ export class FetchMocker {
 	 * Creates a new instance.
 	 * @param {object} options Options for the instance.
 	 * @param {MockServer[]} options.servers The servers to use.
+	 * @param {string|URL} [options.baseUrl] The base URL to use for relative URLs.
 	 * @param {typeof Response} [options.CustomResponse] The Response constructor to use.
 	 * @param {typeof Request} [options.CustomRequest] The Request constructor to use.
 	 */
 	constructor({
 		servers,
+		baseUrl,
 		CustomRequest = globalThis.Request,
 		CustomResponse = globalThis.Response,
 	}) {
 		this.#servers = servers;
+		this.#baseUrl = createBaseUrl(baseUrl);
 		this.#Response = CustomResponse;
 		this.#Request = CustomRequest;
 
 		// create the function here to bind to `this`
 		this.fetch = async (input, init) => {
-			const request = new this.#Request(input, init);
+			
+			// adjust any relative URLs
+			const fixedInput = typeof input === "string" && this.#baseUrl
+				? new URL(input, this.#baseUrl).toString()
+				: input;
+			
+			const request = new this.#Request(fixedInput, init);
 			const allTraces = [];
 
 			/*

@@ -332,4 +332,27 @@ describe("FetchMocker", () => {
 			assert.ok(!fetchMocker.allRoutesCalled());
 		});
 	});
+	
+	describe("Relative URLs", () => {
+		
+		it("should throw an error when using a relative URL and no baseUrl", async () => {
+			const server = new MockServer(BASE_URL);
+			const fetchMocker = new FetchMocker({ servers: [server] });
+			
+			await assert.rejects(fetchMocker.fetch("/hello"), {
+				name: "TypeError",
+				message: "Failed to parse URL from /hello",
+			});
+		});
+		
+		it("should return 200 when using a relative URL and a baseUrl", async () => {
+			const server = new MockServer(BASE_URL);
+			const fetchMocker = new FetchMocker({ servers: [server], baseUrl: BASE_URL });
+			
+			server.get("/hello", 200);
+			
+			const response = await fetchMocker.fetch("/hello");
+			assert.strictEqual(response.status, 200);
+		});
+	});
 });
