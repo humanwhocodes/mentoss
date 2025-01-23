@@ -26,7 +26,7 @@ jobs:
 
             - uses: actions/setup-node@v4
               with:
-                  node-version: 18
+                  node-version: 22
                   registry-url: "https://registry.npmjs.org"
               if: ${{ steps.release.outputs.release_created }}
 
@@ -45,6 +45,14 @@ jobs:
                   npx jsr publish
               if: ${{ steps.release.outputs.release_created }}
 
+            - name: Push to latest and version branches branch
+              run: |
+                git config --global user.email "github-actions[bot]@users.noreply.github.com"
+                git config --global user.name "github-actions[bot]"
+                git push -f origin main:v${{ steps.release.outputs.major }}.x
+                git push -f origin main:latest
+              if: ${{ steps.release.outputs.release_created }}
+              
             # Tweets out release announcement
             - run: 'node dist/esm/bin.js -t -b -m "${{ github.event.repository.full_name }} v${{ steps.release.outputs.major }}.${{ steps.release.outputs.minor }}.${{ steps.release.outputs.patch }} has been released!\n\n${{ github.event.repository.html_url }}/releases/tag/${{ steps.release.outputs.tag_name }}"'
               if: ${{ steps.release.outputs.release_created }}
