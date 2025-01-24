@@ -3,13 +3,13 @@ title: Creating a Fetch Mocker
 description: Learn how to create a fetch mocker to mock the fetch() function
 ---
 
-A *fetch mocker* in Mentoss is how you create a mocked version of a `fetch()` function. Fetch mockers are used to intercept calls to `fetch()` and return responses that you've defined in your mock servers. This allows you to test your code without making real network requests.
+A _fetch mocker_ in Mentoss is how you create a mocked version of a `fetch()` function. Fetch mockers are used to intercept calls to `fetch()` and return responses that you've defined in your mock servers. This allows you to test your code without making real network requests.
 
 ## Create a new `FetchMocker` instance
 
 To get started, import the `FetchMocker` class and create a new instance. The only argument is an object with the following properties:
 
-* `servers` (required) - an array of `MockServer` instances to use for mocking fetch requests
+-   `servers` (required) - an array of `MockServer` instances to use for mocking fetch requests
 
 Here's an example:
 
@@ -19,7 +19,7 @@ import { MockServer, FetchMocker } from "mentoss";
 const server = new MockServer("https://api.example.com");
 
 const mocker = new FetchMocker({
-    servers: [server]
+	servers: [server],
 });
 ```
 
@@ -41,30 +41,29 @@ import { MockServer, FetchMocker } from "mentoss";
 import { expect } from "chai";
 
 describe("My API", () => {
-    const server = new MockServer("https://api.example.com");
-    const mocker = new FetchMocker({
-        servers: [server]
-    });
+	const server = new MockServer("https://api.example.com");
+	const mocker = new FetchMocker({
+		servers: [server],
+	});
 
-    // extract the fetch function
-    const myFetch = mocker.fetch;
+	// extract the fetch function
+	const myFetch = mocker.fetch;
 
-    // reset the server after each test
-    afterEach(() => {
-        server.clear();
-    });
-    
-    it("should return a 200 status code", async () => {
+	// reset the server after each test
+	afterEach(() => {
+		server.clear();
+	});
 
-        // set up the route to test
-        server.get("/ping", 200);
+	it("should return a 200 status code", async () => {
+		// set up the route to test
+		server.get("/ping", 200);
 
-        // make the request
-        const response = await myFetch("https://api.example.com/ping");
-        
-        // check the response
-        expect(response.status).to.equal(200);
-    });
+		// make the request
+		const response = await myFetch("https://api.example.com/ping");
+
+		// check the response
+		expect(response.status).to.equal(200);
+	});
 });
 ```
 
@@ -79,39 +78,38 @@ import { MockServer, FetchMocker } from "mentoss";
 import { expect } from "chai";
 
 describe("My API", () => {
-    let mocker;
+	let mocker;
 
-    const server = new MockServer("https://api.example.com");
-    mocker = new FetchMocker({
-        servers: [server]
-    });
-    
-    // mock the global fetch function
-    before(() => {
-        mocker.mockGlobal();
-    });
-    
-    // reset the server after each test
-    afterEach(() => {
-        server.clear();
-    });
-    
-    // unmock the global fetch function
-    after(() => {
-        mocker.unmockGlobal();
-    });
+	const server = new MockServer("https://api.example.com");
+	mocker = new FetchMocker({
+		servers: [server],
+	});
 
-    it("should return a 200 status code", async () => {
+	// mock the global fetch function
+	before(() => {
+		mocker.mockGlobal();
+	});
 
-        // set up the route to test
-        server.get("/ping", 200);
+	// reset the server after each test
+	afterEach(() => {
+		server.clear();
+	});
 
-        // make the request
-        const response = await fetch("https://api.example.com/ping");
-        
-        // check the response
-        expect(response.status).to.equal(200);
-    });
+	// unmock the global fetch function
+	after(() => {
+		mocker.unmockGlobal();
+	});
+
+	it("should return a 200 status code", async () => {
+		// set up the route to test
+		server.get("/ping", 200);
+
+		// make the request
+		const response = await fetch("https://api.example.com/ping");
+
+		// check the response
+		expect(response.status).to.equal(200);
+	});
 });
 ```
 

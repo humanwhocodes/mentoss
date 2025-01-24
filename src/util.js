@@ -8,18 +8,22 @@
 //-----------------------------------------------------------------------------
 
 /**
- * Formats headers into a string that matches how they are displayed in 
+ * Formats headers into a string that matches how they are displayed in
  * a network panel. Header names are capitalized and separated by a colon
  * from the header value.
  * @param {Headers} headers The headers to format.
  * @returns {string} The formatted headers.
  */
 function formatHeaders(headers) {
-	return Array.from(headers.entries()).map(
-		([name, value]) => `${name.split("-").map(
-			part => part.charAt(0).toUpperCase() + part.slice(1),
-		).join("-")}: ${value}`,
-	).join("\n");
+	return Array.from(headers.entries())
+		.map(
+			([name, value]) =>
+				`${name
+					.split("-")
+					.map(part => part.charAt(0).toUpperCase() + part.slice(1))
+					.join("-")}: ${value}`,
+		)
+		.join("\n");
 }
 
 /**
@@ -30,11 +34,10 @@ function formatHeaders(headers) {
  * @returns {string} The formatted body.
  */
 function formatBody(body) {
-	
 	if (!body) {
 		return "";
 	}
-	
+
 	if (typeof body === "string") {
 		return body;
 	}
@@ -42,9 +45,9 @@ function formatBody(body) {
 	if (body.constructor === Object) {
 		return JSON.stringify(body);
 	}
-	
+
 	// TODO: Other types of bodies
-	
+
 	return body.toString();
 }
 
@@ -80,7 +83,7 @@ export function getBody(request) {
 	if (contentType.startsWith("multipart/form-data")) {
 		return request.formData();
 	}
-	
+
 	// otherwise return the body as bytes
 	return request.arrayBuffer();
 }
@@ -90,12 +93,11 @@ export function getBody(request) {
  * appear in a network panel.
  * @param {Request} request The request to stringify.
  * @param {string|any|FormData|null} body The body of the request
- * @returns {string} The stringified request. 
+ * @returns {string} The stringified request.
  */
 export function stringifyRequest(request, body) {
-
 	let text = `${request.method} ${request.url}`;
-	
+
 	if (request.headers) {
 		text += `\n${formatHeaders(request.headers)}`;
 	}
@@ -103,6 +105,6 @@ export function stringifyRequest(request, body) {
 	if (body) {
 		text += `\n\n${formatBody(body)}`;
 	}
-	
+
 	return text.trim();
 }

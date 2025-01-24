@@ -226,7 +226,7 @@ describe("MockServer", () => {
 			const secondResponse = await server.receive(request);
 			assert.strictEqual(secondResponse, undefined);
 		});
-		
+
 		it("should match a route and the response object should have a URL that matches the request", async () => {
 			server.get("/test", { status: 200, body: "OK" });
 
@@ -239,9 +239,8 @@ describe("MockServer", () => {
 			assert.strictEqual(response.url, `${BASE_URL}/test?foo=bar`);
 		});
 	});
-	
+
 	describe("traceReceive()", () => {
-		
 		it("should return response and messages when a route matches", async () => {
 			server.get("/test", { status: 200, body: "OK" });
 
@@ -256,7 +255,7 @@ describe("MockServer", () => {
 			assert.strictEqual(await getResponseBody(response), "OK");
 			assert.strictEqual(traces.length, 0);
 		});
-		
+
 		it("should return undefined response and traces with multiple messages when a route doesn't match", async () => {
 			server.get("/test", { status: 200, body: "OK" });
 
@@ -268,13 +267,16 @@ describe("MockServer", () => {
 			const { response, traces } = await server.traceReceive(request);
 			assert.strictEqual(response, undefined);
 			assert.strictEqual(traces.length, 1);
-			assert.strictEqual(traces[0].route.toString(), "[Route: GET https://example.com/test -> 200]");
+			assert.strictEqual(
+				traces[0].route.toString(),
+				"[Route: GET https://example.com/test -> 200]",
+			);
 			assert.deepStrictEqual(traces[0].messages, [
 				"✅ URL matches.",
 				"❌ Method does not match. Expected GET but received POST.",
 			]);
 		});
-		
+
 		it("should return response and traces with multiple messages when a route partially matches", async () => {
 			server.get("/test", { status: 200, body: "OK" });
 
@@ -286,20 +288,26 @@ describe("MockServer", () => {
 			const { response, traces } = await server.traceReceive(request);
 			assert.strictEqual(response, undefined);
 			assert.strictEqual(traces.length, 1);
-			assert.strictEqual(traces[0].route.toString(), "[Route: GET https://example.com/test -> 200]");
+			assert.strictEqual(
+				traces[0].route.toString(),
+				"[Route: GET https://example.com/test -> 200]",
+			);
 			assert.deepStrictEqual(traces[0].messages, [
 				"❌ URL does not match.",
 			]);
 		});
-		
+
 		it("should return response and traces with multiple messages when a route doesn't match query string", async () => {
-			server.get({
-				url: "/query",
-				query: {
-					id: "123",
-					name: "Alice",
+			server.get(
+				{
+					url: "/query",
+					query: {
+						id: "123",
+						name: "Alice",
+					},
 				},
-			}, { status: 200, body: "OK" });
+				{ status: 200, body: "OK" },
+			);
 
 			const request = createRequest({
 				method: "GET",
@@ -309,21 +317,27 @@ describe("MockServer", () => {
 			const { response, traces } = await server.traceReceive(request);
 			assert.strictEqual(response, undefined);
 			assert.strictEqual(traces.length, 1);
-			assert.strictEqual(traces[0].route.toString(), "[Route: GET https://example.com/query -> 200]");
+			assert.strictEqual(
+				traces[0].route.toString(),
+				"[Route: GET https://example.com/query -> 200]",
+			);
 			assert.deepStrictEqual(traces[0].messages, [
 				"✅ URL matches.",
 				"✅ Method matches: GET.",
 				"❌ Query string does not match. Expected name=Alice but received name=undefined.",
 			]);
 		});
-		
+
 		it("should return response and traces with multiple messages when a route doesn't match URL parameters", async () => {
-			server.get({
-				url: "/users/:id",
-				params: {
-					id: "123",
+			server.get(
+				{
+					url: "/users/:id",
+					params: {
+						id: "123",
+					},
 				},
-			}, { status: 200, body: "OK" });
+				{ status: 200, body: "OK" },
+			);
 
 			const request = createRequest({
 				method: "GET",
@@ -333,19 +347,25 @@ describe("MockServer", () => {
 			const { response, traces } = await server.traceReceive(request);
 			assert.strictEqual(response, undefined);
 			assert.strictEqual(traces.length, 1);
-			assert.strictEqual(traces[0].route.toString(), "[Route: GET https://example.com/users/:id -> 200]");
+			assert.strictEqual(
+				traces[0].route.toString(),
+				"[Route: GET https://example.com/users/:id -> 200]",
+			);
 			assert.deepStrictEqual(traces[0].messages, [
 				"✅ URL matches.",
 				"✅ Method matches: GET.",
 				"❌ URL parameters do not match. Expected id=123 but received id=456.",
 			]);
 		});
-		
+
 		it("should return response and traces with multiple messages when a route doesn't match headers", async () => {
-			server.get({
-				url: "/headers",
-				headers: { Accept: "application/json" },
-			}, { status: 200, body: "OK" });
+			server.get(
+				{
+					url: "/headers",
+					headers: { Accept: "application/json" },
+				},
+				{ status: 200, body: "OK" },
+			);
 
 			const request = createRequest({
 				method: "GET",
@@ -356,21 +376,27 @@ describe("MockServer", () => {
 			const { response, traces } = await server.traceReceive(request);
 			assert.strictEqual(response, undefined);
 			assert.strictEqual(traces.length, 1);
-			assert.strictEqual(traces[0].route.toString(), "[Route: GET https://example.com/headers -> 200]");
+			assert.strictEqual(
+				traces[0].route.toString(),
+				"[Route: GET https://example.com/headers -> 200]",
+			);
 			assert.deepStrictEqual(traces[0].messages, [
 				"✅ URL matches.",
 				"✅ Method matches: GET.",
 				"❌ Headers do not match. Expected accept=application/json but received accept=text/html.",
 			]);
 		});
-		
+
 		it("should return response and traces with multiple messages when a route doesn't match body", async () => {
-			server.post({
-				url: "/submit",
-				body: {
-					key: "value",
-				}
-			}, { status: 201, body: "Created" });
+			server.post(
+				{
+					url: "/submit",
+					body: {
+						key: "value",
+					},
+				},
+				{ status: 201, body: "Created" },
+			);
 
 			const request = createRequest({
 				method: "POST",
@@ -381,15 +407,18 @@ describe("MockServer", () => {
 			const { response, traces } = await server.traceReceive(request);
 			assert.strictEqual(response, undefined);
 			assert.strictEqual(traces.length, 1);
-			assert.strictEqual(traces[0].route.toString(), "[Route: POST https://example.com/submit -> 201]");
+			assert.strictEqual(
+				traces[0].route.toString(),
+				"[Route: POST https://example.com/submit -> 201]",
+			);
 			assert.deepStrictEqual(traces[0].messages, [
 				"✅ URL matches.",
 				"✅ Method matches: POST.",
 				"✅ Headers match.",
-				"❌ Body does not match. Expected {\"key\":\"value\"} but received {\"key\":\"val\"}.",
+				'❌ Body does not match. Expected {"key":"value"} but received {"key":"val"}.',
 			]);
 		});
-		
+
 		it("should return multiple traces when multiple routes don't match", async () => {
 			server.get("/test", { status: 200, body: "OK" });
 			server.post("/test", { status: 201, body: "Created" });
@@ -402,31 +431,37 @@ describe("MockServer", () => {
 			const { response, traces } = await server.traceReceive(request);
 			assert.strictEqual(response, undefined);
 			assert.strictEqual(traces.length, 2);
-			assert.strictEqual(traces[0].route.toString(), "[Route: GET https://example.com/test -> 200]");
+			assert.strictEqual(
+				traces[0].route.toString(),
+				"[Route: GET https://example.com/test -> 200]",
+			);
 			assert.deepStrictEqual(traces[0].messages, [
 				"✅ URL matches.",
 				"❌ Method does not match. Expected GET but received OPTIONS.",
 			]);
-			assert.strictEqual(traces[1].route.toString(), "[Route: POST https://example.com/test -> 201]");
+			assert.strictEqual(
+				traces[1].route.toString(),
+				"[Route: POST https://example.com/test -> 201]",
+			);
 			assert.deepStrictEqual(traces[1].messages, [
 				"✅ URL matches.",
 				"❌ Method does not match. Expected POST but received OPTIONS.",
 			]);
-
 		});
-		
 	});
-	
+
 	describe("Query Strings", () => {
-		
 		it("should match a route with all query string parameters present", async () => {
-			server.get({
-				url: "/query",
-				query: {
-					id: "123",
-					name: "Alice",
+			server.get(
+				{
+					url: "/query",
+					query: {
+						id: "123",
+						name: "Alice",
+					},
 				},
-			}, { status: 200, body: "OK" });
+				{ status: 200, body: "OK" },
+			);
 
 			const request = createRequest({
 				method: "GET",
@@ -438,14 +473,17 @@ describe("MockServer", () => {
 			assert.strictEqual(response.statusText, "OK");
 			assert.strictEqual(await getResponseBody(response), "OK");
 		});
-		
+
 		it("should match a route with partially matching query string parameters", async () => {
-			server.get({
-				url: "/query",
-				query: {
-					id: "123",
+			server.get(
+				{
+					url: "/query",
+					query: {
+						id: "123",
+					},
 				},
-			}, { status: 200, body: "OK" });
+				{ status: 200, body: "OK" },
+			);
 
 			const request = createRequest({
 				method: "GET",
@@ -457,15 +495,18 @@ describe("MockServer", () => {
 			assert.strictEqual(response.statusText, "OK");
 			assert.strictEqual(await getResponseBody(response), "OK");
 		});
-		
+
 		it("should not match a route when query string parameters are missing", async () => {
-			server.get({
-				url: "/query",
-				query: {
-					id: "123",
-					name: "Alice",
+			server.get(
+				{
+					url: "/query",
+					query: {
+						id: "123",
+						name: "Alice",
+					},
 				},
-			}, { status: 200, body: "OK" });
+				{ status: 200, body: "OK" },
+			);
 
 			const request = createRequest({
 				method: "GET",
@@ -475,15 +516,18 @@ describe("MockServer", () => {
 			const response = await server.receive(request);
 			assert.strictEqual(response, undefined);
 		});
-		
+
 		it("should not match a route when query string parameters don't match", async () => {
-			server.get({
-				url: "/query",
-				query: {
-					id: "123",
-					name: "Alice",
+			server.get(
+				{
+					url: "/query",
+					query: {
+						id: "123",
+						name: "Alice",
+					},
 				},
-			}, { status: 200, body: "OK" });
+				{ status: 200, body: "OK" },
+			);
 
 			const request = createRequest({
 				method: "GET",
@@ -493,18 +537,19 @@ describe("MockServer", () => {
 			const response = await server.receive(request);
 			assert.strictEqual(response, undefined);
 		});
-		
 	});
-	
+
 	describe("Params", () => {
-		
 		it("should match a route with all URL parameters present", async () => {
-			server.get({
-				url: "/users/:id",
-				params: {
-					id: "123",
+			server.get(
+				{
+					url: "/users/:id",
+					params: {
+						id: "123",
+					},
 				},
-			}, { status: 200, body: "OK" });
+				{ status: 200, body: "OK" },
+			);
 
 			const request = createRequest({
 				method: "GET",
@@ -516,14 +561,17 @@ describe("MockServer", () => {
 			assert.strictEqual(response.statusText, "OK");
 			assert.strictEqual(await getResponseBody(response), "OK");
 		});
-		
+
 		it("should not match a route with matching URL parameters in subpath", async () => {
-			server.get({
-				url: "/users/:id",
-				params: {
-					id: "123",
+			server.get(
+				{
+					url: "/users/:id",
+					params: {
+						id: "123",
+					},
 				},
-			}, { status: 200, body: "OK" });
+				{ status: 200, body: "OK" },
+			);
 
 			const request = createRequest({
 				method: "GET",
@@ -533,14 +581,17 @@ describe("MockServer", () => {
 			const response = await server.receive(request);
 			assert.strictEqual(response, undefined);
 		});
-		
+
 		it("should not match a route when URL parameters are missing", async () => {
-			server.get({
-				url: "/users/:id",
-				params: {
-					id: "123",
+			server.get(
+				{
+					url: "/users/:id",
+					params: {
+						id: "123",
+					},
 				},
-			}, { status: 200, body: "OK" });
+				{ status: 200, body: "OK" },
+			);
 
 			const request = createRequest({
 				method: "GET",
@@ -550,14 +601,17 @@ describe("MockServer", () => {
 			const response = await server.receive(request);
 			assert.strictEqual(response, undefined);
 		});
-		
+
 		it("should not match a route when URL parameters don't match", async () => {
-			server.get({
-				url: "/users/:id",
-				params: {
-					id: "123",
+			server.get(
+				{
+					url: "/users/:id",
+					params: {
+						id: "123",
+					},
 				},
-			}, { status: 200, body: "OK" });
+				{ status: 200, body: "OK" },
+			);
 
 			const request = createRequest({
 				method: "GET",
@@ -568,7 +622,7 @@ describe("MockServer", () => {
 			assert.strictEqual(response, undefined);
 		});
 	});
-	
+
 	describe("Headers", () => {
 		const methods = [
 			"get",

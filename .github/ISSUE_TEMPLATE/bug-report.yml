@@ -13,7 +13,7 @@ body:
           value: |
               Node version: 
               npm version: 
-              Mentoss version: 
+              Mentoss version:
       validations:
           required: true
     - type: textarea

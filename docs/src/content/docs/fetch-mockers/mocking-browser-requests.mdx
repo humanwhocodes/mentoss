@@ -5,7 +5,7 @@ description: Learn how to mock browser requests using Mentoss
 
 import { Aside } from "@astrojs/starlight/components";
 
-The global `fetch()` function is available in many JavaScript runtimes, including server-side runtimes and web browsers. While `fetch()` works similarly in both environments, there are some important differences to take into account when testing code that uses `fetch()` in a browser environment. 
+The global `fetch()` function is available in many JavaScript runtimes, including server-side runtimes and web browsers. While `fetch()` works similarly in both environments, there are some important differences to take into account when testing code that uses `fetch()` in a browser environment.
 
 ## Relative URLs with `fetch()`
 
@@ -24,36 +24,208 @@ import { expect } from "chai";
 const BASE_URL = "https://api.example.com";
 
 describe("My API", () => {
-    const server = new MockServer(BASE_URL);
-    const mocker = new FetchMocker({
-        servers: [server],
-        baseUrl: BASE_URL
-    });
+	const server = new MockServer(BASE_URL);
+	const mocker = new FetchMocker({
+		servers: [server],
+		baseUrl: BASE_URL,
+	});
 
-    // extract the fetch function
-    const myFetch = mocker.fetch;
+	// extract the fetch function
+	const myFetch = mocker.fetch;
 
-    // reset the server after each test
-    afterEach(() => {
-        server.clear();
-    });
-    
-    it("should return a 200 status code", async () => {
+	// reset the mocker after each test
+	afterEach(() => {
+		mocker.clearAll();
+	});
 
-        // set up the route to test
-        server.get("/ping", 200);
+	it("should return a 200 status code", async () => {
+		// set up the route to test
+		server.get("/ping", 200);
 
-        // make the request
-        const response = await myFetch("/ping");
-        
-        // check the response
-        expect(response.status).to.equal(200);
-    });
+		// make the request
+		const response = await myFetch("/ping");
+
+		// check the response
+		expect(response.status).to.equal(200);
+	});
 });
 ```
 
 In this example, the `baseUrl` option is set to `"https://api.example.com"`, which means that relative URLs will be resolved against that base URL. The test then calls `myFetch("/ping")`, which resolves to `"https://api.example.com/ping"` and makes a request to the server. This allows you to test code that uses relative URLs with `fetch()` in a browser-like environment.
 
 <Aside type="caution">
-When using the `baseUrl` option with `FetchMocker`, make sure to set it to the correct base URL for your mock server. If you don't have a mock server defined for the base URL, the request will fail.
+	When using the `baseUrl` option with `FetchMocker`, make sure to set it to
+	the correct base URL for your mock server. If you don't have a mock server
+	defined for the base URL, the request will fail.
+</Aside>
+
+## Mocking CORS Requests
+
+Another important consideration when mocking browser requests is how to handle CORS (Cross-Origin Resource Sharing) requests. CORS is a security feature that restricts which domains can make requests to a server. When you make a request from one domain to another, the server must include the appropriate CORS headers to allow the request to go through. When you set the `baseUrl` option in the `FetchMocker` constructor, Mentoss automatically includes the appropriate CORS headers when a request is made to a different origin.
+
+### Simple Requests
+
+For [simple requests](https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS#simple_requests), Mentoss automatically includes the `Origin` header on the request. If the server responds with the appropriate `Access-Control-Allow-Origin` header, your code will receive the response as expected. If the server does not respond with the appropriate header, the request will fail. Here's an example:
+
+```js {20-22}
+import { MockServer, FetchMocker } from "mentoss";
+
+const BASE_URL = "https://api.example.com";
+
+describe("My API", () => {
+	const server = new MockServer("https://www.example.com");
+	const mocker = new FetchMocker({
+		servers: [server],
+		baseUrl: BASE_URL,
+	});
+
+	// extract the fetch function
+	const myFetch = mocker.fetch;
+
+	it("should return a 200 status code", async () => {
+		// set up the route to test
+		server.get("/ping", {
+			status: 200,
+			headers: {
+				"Access-Control-Allow-Origin": BASE_URL,
+			},
+			body: { message: "pong" },
+		});
+
+		// make the request
+		const response = await myFetch("https://www.example.com/ping");
+
+		// check the response
+		expect(response.status).to.equal(200);
+	});
+});
+```
+
+In this example, the server responds with the `Access-Control-Allow-Origin` header set to the base URL `"https://api.example.com"`. This allows the request to go through because the origin matches the origin of the fetch mocker's `baseUrl`, and the test passes.
+
+### Preflighted Requests
+
+For [preflighted requests](https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS#preflighted_requests), Mentoss automatically sends an `OPTIONS` request to the server to check if the request is allowed. If the server responds with the appropriate `Access-Control-Allow-Methods` and `Access-Control-Allow-Headers` headers, the original request will go through. If the server does not respond with the appropriate headers, the request will fail. Here's an example:
+
+```js {17-24}
+import { MockServer, FetchMocker } from "mentoss";
+
+const BASE_URL = "https://api.example.com";
+
+describe("My API", () => {
+	const server = new MockServer("https://www.example.com");
+	const mocker = new FetchMocker({
+		servers: [server],
+		baseUrl: BASE_URL,
+	});
+
+	// extract the fetch function
+	const myFetch = mocker.fetch;
+
+	it("should return a 200 status code", async () => {
+		// this is for the preflight request
+		server.options("/ping", {
+			status: 200,
+			headers: {
+				"Access-Control-Allow-Origin": BASE_URL,
+				"Access-Control-Allow-Headers": "Content-Type",
+			},
+		});
+
+		// this is the route that we want to call
+		server.get("/ping", {
+			status: 200,
+			headers: {
+				"Access-Control-Allow-Origin": BASE_URL,
+			},
+			body: { message: "pong" },
+		});
+
+		// make the request
+		const response = await myFetch("https://www.example.com/ping", {
+			headers: {
+				"Content-Type": "application/json",
+			},
+		});
+
+		// check the response
+		expect(response.status).to.equal(200);
+	});
+});
+```
+
+In this example, the code attempts a request to `"https://www.example.com/ping"`. Because this is a cross-origin request, Mentoss first sends an `OPTIONS` request to the server to check if the request is allowed. The server responds to the preflight request with the appropriate `Access-Control-Allow-Origin` and `Access-Control-Allow-Headers` headers, allowing the original request to go through.
+
+### The Preflight Cache
+
+When a browser makes a preflight request, it caches the response for a period of time (usually 5 minutes but customizable using the `Access-Control-Max-Age` header). This means that if you make the same request again within the cache period, the browser won't send another preflight request. Instead, it will use the cached response to determine if the request is allowed. Mentoss does not currently support caching preflight responses, so each preflight request will result in a new preflight request to the server.
+
+Mentoss caches preflight responses in memory for the duration of the test run. This means that if you make the same preflighted request multiple times within a single test, Mentoss will only send the `OPTIONS` request once. However, you can manually clear the preflight cache by calling the `clearPreflightCache()` method. It's helpful to do this after each test
+
+```js {15-18}
+import { MockServer, FetchMocker } from "mentoss";
+
+const BASE_URL = "https://api.example.com";
+
+describe("My API", () => {
+	const server = new MockServer("https://www.example.com");
+	const mocker = new FetchMocker({
+		servers: [server],
+		baseUrl: BASE_URL,
+	});
+
+	// extract the fetch function
+	const myFetch = mocker.fetch;
+
+	// clear preflight cache entries
+	afterEach(() => {
+		mocker.clearPreflightCache();
+	});
+
+	it("should return a 200 status code", async () => {
+		// this is for the preflight request
+		server.options("/ping", {
+			status: 200,
+			headers: {
+				"Access-Control-Allow-Origin": BASE_URL,
+				"Access-Control-Allow-Headers": "Content-Type",
+			},
+		});
+
+		// this is the route that we want to call
+		server.get("/ping", {
+			status: 200,
+			headers: {
+				"Access-Control-Allow-Origin": BASE_URL,
+			},
+			body: { message: "pong" },
+		});
+
+		// make the request
+		const response = await myFetch("https://www.example.com/ping", {
+			headers: {
+				"Content-Type": "application/json",
+			},
+		});
+
+		// check the response
+		expect(response.status).to.equal(200);
+	});
+});
+```
+
+<Aside type="tip">
+	The preflight cache is also cleared when you call `mocker.clearAll()`, so
+	you don't need to call `mocker.clearPreflightCache()` if you're already
+	calling `mocker.clearAll()`.
+</Aside>
+
+<Aside type="caution">
+While CORS support is mostly complete, there are two features that are not yet supported:
+
+-   Credentialed requests (requests that include cookies or HTTP authentication information)
+-   The `Access-Control-Expose-Headers` header
+
+Mentoss throws errors when either of these features is used to ensure it's clear that a test is not behaving as expected.
+
 </Aside>

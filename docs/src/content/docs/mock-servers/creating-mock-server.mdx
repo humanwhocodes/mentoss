@@ -5,7 +5,7 @@ description: Mock servers are how you define what requests and responses you wan
 
 import { Aside } from "@astrojs/starlight/components";
 
-A *mock server* in Mentoss is how you define what requests you're expecting to send and what responses should be returned for those requests. Mock servers are different from real servers in that mock servers don't run on a port and aren't open to network requests. Instead, mock servers exist only in memory, eliminating any concerns about side effects or security issues.
+A _mock server_ in Mentoss is how you define what requests you're expecting to send and what responses should be returned for those requests. Mock servers are different from real servers in that mock servers don't run on a port and aren't open to network requests. Instead, mock servers exist only in memory, eliminating any concerns about side effects or security issues.
 
 You can assign one or more mock servers to a `FetchMocker` instance, therefore limiting the requests a mocked `fetch()` call can make.
 
@@ -25,13 +25,13 @@ With your server created, the next step is to add some routes.
 
 You can add routes to a `MockServer` by calling one of several methods:
 
-* `get(request, response)`
-* `post(request, response)`
-* `put(request, response)`
-* `delete(request, response)`
-* `patch(request, response)`
-* `options(request, response)`
-* `head(request, response)`
+-   `get(request, response)`
+-   `post(request, response)`
+-   `put(request, response)`
+-   `delete(request, response)`
+-   `patch(request, response)`
+-   `options(request, response)`
+-   `head(request, response)`
 
 Each method accepts two arguments: a request pattern and a response pattern. These patterns can be a single value or an object with multiple properties, depending on your desired behavior for the route.
 
@@ -64,5 +64,8 @@ server.get("/users/:userId", 200);
 This instructs the server to respond to GET requests for any URL that matches the pattern `https://api.example.com/users/:userId` with a 200 status code. The `:userId` part of the URL is a placeholder that can match any value, so URLs like `https://api.example.com/users/123` or `https://api.example.com/users/456` match the pattern. This is helpful if you aren't quite sure what the exact URL will be during a test.
 
 <Aside type="tip">
-Each route in a `MockServer` instance can match only one request pattern. Once a pattern has matched, that route is no longer considered when matching future requests. If you need to match multiple requests with the same pattern, you'll need to create multiple routes.
+	Each route in a `MockServer` instance can match only one request pattern.
+	Once a pattern has matched, that route is no longer considered when matching
+	future requests. If you need to match multiple requests with the same
+	pattern, you'll need to create multiple routes.
 </Aside>

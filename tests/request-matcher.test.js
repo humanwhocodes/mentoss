@@ -214,136 +214,132 @@ describe("RequestMatcher", () => {
 
 			assert.strictEqual(matcher.matches(request), true);
 		});
-		
+
 		describe("Query Strings", () => {
-			
 			it("should match requests with matching query string data", () => {
 				const matcher = new RequestMatcher({
 					method: "GET",
 					url: `${BASE_URL}/users`,
 					query: { id: "123" },
 				});
-	
+
 				const request = {
 					method: "GET",
 					url: `${BASE_URL}/users`,
-					query : { id: "123" },
+					query: { id: "123" },
 				};
-	
+
 				assert.strictEqual(matcher.matches(request), true);
 			});
-			
+
 			it("should match requests with partially matching query string data", () => {
 				const matcher = new RequestMatcher({
 					method: "GET",
 					url: `${BASE_URL}/users`,
 					query: { id: "123" },
 				});
-	
+
 				const request = {
 					method: "GET",
 					url: `${BASE_URL}/users`,
 					query: { id: "123", name: "Alice" },
 				};
-	
+
 				assert.strictEqual(matcher.matches(request), true);
 			});
-			
+
 			it("should not match requests when query string isn't present", () => {
 				const matcher = new RequestMatcher({
 					method: "GET",
 					url: `${BASE_URL}/users`,
 					query: { id: "123" },
 				});
-	
+
 				const request = {
 					method: "GET",
 					url: `${BASE_URL}/users`,
 				};
-	
+
 				assert.strictEqual(matcher.matches(request), false);
 			});
-			
+
 			it("should not match request when query string doesn't match", () => {
 				const matcher = new RequestMatcher({
 					method: "GET",
 					url: `${BASE_URL}/users`,
 					query: { id: "123" },
 				});
-	
+
 				const request = {
 					method: "GET",
 					url: `${BASE_URL}/users`,
 					query: { id: "456" },
 				};
-	
+
 				assert.strictEqual(matcher.matches(request), false);
 			});
-			
 		});
-		
+
 		describe("Params", () => {
-			
 			it("should match requests with matching URL params", () => {
 				const matcher = new RequestMatcher({
 					method: "GET",
 					url: `${BASE_URL}/users/:id`,
 					params: { id: "123" },
 				});
-	
+
 				const request = {
 					method: "GET",
 					url: `${BASE_URL}/users/123`,
 				};
-	
+
 				assert.strictEqual(matcher.matches(request), true);
 			});
-			
+
 			it("should not match requests with matching URL params in different URL", () => {
 				const matcher = new RequestMatcher({
 					method: "GET",
 					url: `${BASE_URL}/users/:id`,
 					params: { id: "123" },
 				});
-	
+
 				const request = {
 					method: "GET",
 					url: `${BASE_URL}/users/123/edit`,
 				};
-	
+
 				assert.strictEqual(matcher.matches(request), false);
 			});
-			
+
 			it("should not match requests when URL params are missing", () => {
 				const matcher = new RequestMatcher({
 					method: "GET",
 					url: `${BASE_URL}/users/:id`,
 					params: { id: "123" },
 				});
-	
+
 				const request = {
 					method: "GET",
 					url: `${BASE_URL}/users`,
 				};
-	
+
 				assert.strictEqual(matcher.matches(request), false);
 			});
-			
+
 			it("should not match requests when URL params don't match", () => {
 				const matcher = new RequestMatcher({
 					method: "GET",
 					url: `${BASE_URL}/users/:id`,
 					params: { id: "123" },
 				});
-	
+
 				const request = {
 					method: "GET",
 					url: `${BASE_URL}/users/456`,
 				};
-	
+
 				assert.strictEqual(matcher.matches(request), false);
 			});
-			
 		});
 	});
 });

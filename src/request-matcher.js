@@ -72,13 +72,13 @@ export class RequestMatcher {
 	 * @type {Record<string, string>}
 	 */
 	#headers;
-	
+
 	/**
 	 * The query string to match.
 	 * @type {Record<string, string> | undefined}
 	 */
 	#query;
-	
+
 	/**
 	 * The URL parameters to match.
 	 * @type {Record<string, string> | undefined}
@@ -96,7 +96,15 @@ export class RequestMatcher {
 	 * @param {Record<string, string>} [options.query] The query string to match.
 	 * @param {Record<string, string>} [options.params] The URL parameters to match.
 	 */
-	constructor({ method, url, baseUrl, body = null, headers = {}, query, params }) {
+	constructor({
+		method,
+		url,
+		baseUrl,
+		body = null,
+		headers = {},
+		query,
+		params,
+	}) {
 		this.#method = method;
 		this.#pattern = new URLPattern(url, baseUrl);
 		this.#body = body;
@@ -104,7 +112,7 @@ export class RequestMatcher {
 		this.#query = query;
 		this.#params = params;
 	}
-	
+
 	/**
 	 * Checks if the request matches the matcher. Traces all of the details to help
 	 * with debugging.
@@ -112,11 +120,10 @@ export class RequestMatcher {
 	 * @returns {{matches:boolean, messages:string[]}} True if the request matches, false if not.
 	 */
 	traceMatches(request) {
-		
 		/*
 		 * Check the URL first. This is helpful for tracing when requests don't match
 		 * because people more typically get the method wrong rather than the URL.
-		 */ 
+		 */
 		// then check the URL
 		const urlMatch = this.#pattern.exec(request.url);
 		if (!urlMatch) {
@@ -127,65 +134,80 @@ export class RequestMatcher {
 		}
 
 		const messages = ["✅ URL matches."];
-		
+
 		// first check the method
 		if (request.method.toLowerCase() !== this.#method.toLowerCase()) {
 			return {
 				matches: false,
-				messages: [...messages, `❌ Method does not match. Expected ${this.#method.toUpperCase()} but received ${request.method.toUpperCase()}.`],
+				messages: [
+					...messages,
+					`❌ Method does not match. Expected ${this.#method.toUpperCase()} but received ${request.method.toUpperCase()}.`,
+				],
 			};
 		}
-		
+
 		messages.push(`✅ Method matches: ${this.#method.toUpperCase()}.`);
 
 		// then check query string
 		const expectedQuery = this.#query;
-		
+
 		if (expectedQuery) {
 			const actualQuery = request.query;
-			
+
 			if (!actualQuery) {
 				return {
 					matches: false,
-					messages: [...messages, "❌ Query string does not match. Expected query string but received none."],
+					messages: [
+						...messages,
+						"❌ Query string does not match. Expected query string but received none.",
+					],
 				};
 			}
-			
+
 			for (const [key, value] of Object.entries(expectedQuery)) {
 				if (actualQuery[key] !== value) {
 					return {
 						matches: false,
-						messages: [...messages, `❌ Query string does not match. Expected ${key}=${value} but received ${key}=${actualQuery[key]}.`],
+						messages: [
+							...messages,
+							`❌ Query string does not match. Expected ${key}=${value} but received ${key}=${actualQuery[key]}.`,
+						],
 					};
 				}
 			}
 		}
-		
+
 		// then check URL parameters
 		const expectedParams = this.#params;
-		
+
 		if (expectedParams) {
 			const actualParams = urlMatch.pathname.groups;
-			
+
 			if (!actualParams) {
 				return {
 					matches: false,
-					messages: [...messages, "❌ URL parameters do not match. Expected parameters but received none."],
+					messages: [
+						...messages,
+						"❌ URL parameters do not match. Expected parameters but received none.",
+					],
 				};
 			}
-			
+
 			for (const [key, value] of Object.entries(expectedParams)) {
 				if (actualParams[key] !== value) {
 					return {
 						matches: false,
-						messages: [...messages, `❌ URL parameters do not match. Expected ${key}=${value} but received ${key}=${actualParams[key]}.`],
+						messages: [
+							...messages,
+							`❌ URL parameters do not match. Expected ${key}=${value} but received ${key}=${actualParams[key]}.`,
+						],
 					};
 				}
 			}
-			
+
 			messages.push("✅ URL parameters match.");
 		}
-		
+
 		// then check the headers in a case-insensitive manner
 		if (request.headers) {
 			const expectedHeaders = Object.entries(this.#headers).map(
@@ -202,11 +224,14 @@ export class RequestMatcher {
 				if (!actualValue || actualValue[1] !== value) {
 					return {
 						matches: false,
-						messages: [...messages, `❌ Headers do not match. Expected ${key}=${value} but received ${key}=${actualValue ? actualValue[1] : "none"}.`],
+						messages: [
+							...messages,
+							`❌ Headers do not match. Expected ${key}=${value} but received ${key}=${actualValue ? actualValue[1] : "none"}.`,
+						],
 					};
 				}
 			}
-			
+
 			messages.push("✅ Headers match.");
 		}
 
@@ -216,7 +241,10 @@ export class RequestMatcher {
 			if (request.body === null || request.body === undefined) {
 				return {
 					matches: false,
-					messages: [...messages, "❌ Body does not match. Expected body but received none."],
+					messages: [
+						...messages,
+						"❌ Body does not match. Expected body but received none.",
+					],
 				};
 			}
 
@@ -224,16 +252,22 @@ export class RequestMatcher {
 				if (this.#body !== request.body) {
 					return {
 						matches: false,
-						messages: [...messages, `❌ Body does not match. Expected ${this.#body} but received ${request.body}`],
+						messages: [
+							...messages,
+							`❌ Body does not match. Expected ${this.#body} but received ${request.body}`,
+						],
 					};
 				}
-				
+
 				messages.push(`✅ Body matches`);
 			} else if (this.#body instanceof FormData) {
 				if (!(request.body instanceof FormData)) {
 					return {
 						matches: false,
-						messages: [...messages, "❌ Body does not match. Expected FormData but received none."],
+						messages: [
+							...messages,
+							"❌ Body does not match. Expected FormData but received none.",
+						],
 					};
 				}
 
@@ -241,18 +275,24 @@ export class RequestMatcher {
 					if (request.body.get(key) !== value) {
 						return {
 							matches: false,
-							messages: [...messages, `❌ Body does not match. Expected ${key}=${value} but received ${key}=${request.body.get(key)}.`],
+							messages: [
+								...messages,
+								`❌ Body does not match. Expected ${key}=${value} but received ${key}=${request.body.get(key)}.`,
+							],
 						};
 					}
 				}
-				
+
 				messages.push("✅ Body matches.");
 			} else {
 				// body must be an object here to run a check
 				if (typeof request.body !== "object") {
 					return {
 						matches: false,
-						messages: [...messages, "❌ Body does not match. Expected object but received none."],
+						messages: [
+							...messages,
+							"❌ Body does not match. Expected object but received none.",
+						],
 					};
 				}
 
@@ -260,10 +300,13 @@ export class RequestMatcher {
 				if (!deepCompare(request.body, this.#body)) {
 					return {
 						matches: false,
-						messages: [...messages, `❌ Body does not match. Expected ${JSON.stringify(this.#body)} but received ${JSON.stringify(request.body)}.`],
+						messages: [
+							...messages,
+							`❌ Body does not match. Expected ${JSON.stringify(this.#body)} but received ${JSON.stringify(request.body)}.`,
+						],
 					};
 				}
-				
+
 				messages.push("✅ Body matches.");
 			}
 		}
@@ -273,7 +316,7 @@ export class RequestMatcher {
 			messages,
 		};
 	}
-	
+
 	/**
 	 * Checks if the request matches the matcher.
 	 * @param {RequestPattern} request The request to check.

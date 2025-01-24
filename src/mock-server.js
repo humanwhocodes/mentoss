@@ -92,7 +92,7 @@ export class Route {
 	 * @type {RequestMatcher}
 	 */
 	#matcher;
-	
+
 	/**
 	 * The full URL for the route.
 	 * @type {string}
@@ -121,12 +121,12 @@ export class Route {
 	matches(request) {
 		return this.#matcher.matches(request);
 	}
-	
+
 	/**
 	 * Traces the details of the request to see why it doesn't match.
 	 * @param {RequestPattern} request The request to check.
 	 * @returns {{matches:boolean, messages:string[]}} The trace match result.
-	 */ 
+	 */
 	traceMatches(request) {
 		return this.#matcher.traceMatches(request);
 	}
@@ -336,7 +336,7 @@ export class MockServer {
 	async receive(request, PreferredResponse = Response) {
 		return (await this.traceReceive(request, PreferredResponse)).response;
 	}
-	
+
 	/**
 	 * Traces the details of the request to see why it doesn't match.
 	 * @param {Request} request The request to check.
@@ -344,18 +344,19 @@ export class MockServer {
 	 * @returns {Promise<{response:Response|undefined,traces: Array<Trace>}>} The trace match result.
 	 */
 	async traceReceive(request, PreferredResponse = Response) {
-		
 		// convert into a RequestPattern so each route doesn't have to read the body
 		const requestPattern = {
 			method: request.method,
 			url: request.url,
 			headers: Object.fromEntries([...request.headers.entries()]),
-			query: Object.fromEntries(new URL(request.url).searchParams.entries()),
+			query: Object.fromEntries(
+				new URL(request.url).searchParams.entries(),
+			),
 			body: await getBody(request),
 		};
-		
+
 		const traces = [];
-	
+
 		/*
 		 * Search for the first route that matches the request and return
 		 * the response. When there's a match, remove the route from the
@@ -365,26 +366,25 @@ export class MockServer {
 		for (let i = 0; i < this.#unmatchedRoutes.length; i++) {
 			const route = this.#unmatchedRoutes[i];
 			const trace = route.traceMatches(requestPattern);
-			
+
 			if (trace.matches) {
 				this.#unmatchedRoutes.splice(i, 1);
 				this.#matchedRoutes.push(route);
-				
+
 				/*
 				 * Response constructor doesn't allow setting the URL so we
 				 * need to set it after creating the response.
 				 */
 				const response = route.createResponse(PreferredResponse);
 				Object.defineProperty(response, "url", { value: request.url });
-				
+
 				return { response, traces };
 			}
-			
+
 			traces.push({ ...trace, route });
 		}
-		
+
 		return { response: undefined, traces };
-		
 	}
 
 	/**

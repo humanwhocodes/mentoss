@@ -38,27 +38,30 @@ server.get("/api/users/:id", 200);
 
 This route will match any GET request to `/api/users/:id` and return a 200 status code. Here are some examples of requests that would match this route:
 
-- `GET /api/users/123`
-- `GET /api/users/456`
-- `GET /api/users/abc`
-- `GET /api/users/123?profile=full`
+-   `GET /api/users/123`
+-   `GET /api/users/456`
+-   `GET /api/users/abc`
+-   `GET /api/users/123?profile=full`
 
 In the last example, the query parameter `profile=full` is ignored because the route pattern does not include a query object to match. To match the query parameter, you would need to add a query object to the route pattern like this:
 
 ```js
-server.get({
-    url: "/api/users/:id",
-    query: {
-        profile: "full"
-    }
-}, 200);
+server.get(
+	{
+		url: "/api/users/:id",
+		query: {
+			profile: "full",
+		},
+	},
+	200,
+);
 ```
 
 Now, the route will only match requests that include the query parameter `profile=full`. Here are some examples of requests that would match this route:
 
-- `GET /api/users/123?profile=full`
-- `GET /api/users/456?profile=full`
-- `GET /api/users/abc?profile=full`
+-   `GET /api/users/123?profile=full`
+-   `GET /api/users/456?profile=full`
+-   `GET /api/users/abc?profile=full`
 
 In this way, you can create routes that match specific requests based on the request's path, method, URL parameters, query parameters, headers, and body content.
 

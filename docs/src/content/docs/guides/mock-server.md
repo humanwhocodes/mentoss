@@ -3,7 +3,7 @@ title: Creating a Mock Server
 description: Mock servers are how you define what requests and responses you want
 ---
 
-A *mock server* in Mentoss is how you define what requests you're expecting to send and what responses should be returned for those requests. Mock servers are different from real servers in that mock servers don't run on a port and aren't open to network requests. Instead, mock servers exist only in memory, eliminating any concerns about side effects or security issues.
+A _mock server_ in Mentoss is how you define what requests you're expecting to send and what responses should be returned for those requests. Mock servers are different from real servers in that mock servers don't run on a port and aren't open to network requests. Instead, mock servers exist only in memory, eliminating any concerns about side effects or security issues.
 
 You can assign one or more mock servers to a `FetchMocker` instance, therefore limiting the requests a mocked `fetch()` call can make.
 
@@ -23,13 +23,13 @@ With your server created, the next step is to add some routes.
 
 You can add routes to a `MockServer` by calling one of several methods:
 
-* `get(request, response)`
-* `post(request, response)`
-* `put(request, response)`
-* `delete(request, response)`
-* `patch(request, response)`
-* `options(request, response)`
-* `head(request, response)`
+-   `get(request, response)`
+-   `post(request, response)`
+-   `put(request, response)`
+-   `delete(request, response)`
+-   `patch(request, response)`
+-   `options(request, response)`
+-   `head(request, response)`
 
 Each method accepts two arguments: a request pattern and a response pattern. These patterns can be a single value or an object with multiple properties, depending on your desired behavior for the route.
 
@@ -65,11 +65,11 @@ This instructs the server to respond to GET requests for any URL that matches th
 
 If you'd like to only respond to requests that match other fields in addition to the method and URL, then you should use a request pattern object instead. Request pattern objects allow you to specify additional fields that should match from the request. Possible keys are:
 
-* `url` (required) - the URL to match.
-* `query` - query string parameters to match. Note that any URL containing all of the query string parameters is considered a match, even if the URL contains more query string parameters then are mentioned in the request pattern.
-* `params` - URL parameters to match.
-* `headers` - HTTP headers to match. Similar to `query`, a request containing all headers in the request pattern is considered a match even if the request contains additional headers.
-* `body` - the body of the request to match. This can be a string, `FormData`, or an object (in which case it's treated as JSON). For objects and `FormData`, the matching works similar to `query` and `headers`.
+-   `url` (required) - the URL to match.
+-   `query` - query string parameters to match. Note that any URL containing all of the query string parameters is considered a match, even if the URL contains more query string parameters then are mentioned in the request pattern.
+-   `params` - URL parameters to match.
+-   `headers` - HTTP headers to match. Similar to `query`, a request containing all headers in the request pattern is considered a match even if the request contains additional headers.
+-   `body` - the body of the request to match. This can be a string, `FormData`, or an object (in which case it's treated as JSON). For objects and `FormData`, the matching works similar to `query` and `headers`.
 
 Here are some examples:
 
@@ -79,32 +79,41 @@ import { MockServer } from "mentoss";
 const server = new MockServer("https://api.example.com");
 
 // match /users/123
-server.get({
-    url: "/users/:userId",
-    params: {
-        userId: "123"
-    }
-}, 200);
+server.get(
+	{
+		url: "/users/:userId",
+		params: {
+			userId: "123",
+		},
+	},
+	200,
+);
 
 // match /users?userId=123
-server.get({
-    url: "/users",
-    query: {
-        userId: "123"
-    }
-}, 200);
+server.get(
+	{
+		url: "/users",
+		query: {
+			userId: "123",
+		},
+	},
+	200,
+);
 
 // match JSON request to /users/:userId
-server.post({
-    url: "/users/:userId",
-    params: {
-        userId: "123"
-    },
-    headers: {
-        "Content-Type": "application/json"
-    },
-    body: {
-        name: "John Doe"
-    }
-}, 200);
+server.post(
+	{
+		url: "/users/:userId",
+		params: {
+			userId: "123",
+		},
+		headers: {
+			"Content-Type": "application/json",
+		},
+		body: {
+			name: "John Doe",
+		},
+	},
+	200,
+);
 ```
