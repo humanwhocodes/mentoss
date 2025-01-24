@@ -1,5 +1,5 @@
 /**
- * @fileoverview HTTP status codes and text
+ * @fileoverview CORS utilities for Fetch API requests.
  * @author Nicholas C. Zakas
  */
 

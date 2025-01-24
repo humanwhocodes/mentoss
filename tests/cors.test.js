@@ -1,5 +1,5 @@
 /**
- * @fileoverview Tests for the HTTP utilities.
+ * @fileoverview Tests for the CORS utilities.
  * @autor Nicholas C. Zakas
  */
 /* global Request, Headers */
@@ -9,7 +9,7 @@
 //-----------------------------------------------------------------------------
 
 import assert from "node:assert";
-import { isCorsSimpleRequest } from "../src/http.js";
+import { isCorsSimpleRequest } from "../src/cors.js";
 
 //-----------------------------------------------------------------------------
 // Tests
