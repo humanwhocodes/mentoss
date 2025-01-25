@@ -36,7 +36,7 @@ There are two ways to use a mocked `fetch()` function:
 
 Each `FetchMocker` instance creates a `fetch()` function that can be extracted and used in place of the global `fetch()` function. Here's an example:
 
-```js {10-11, 23-24}
+```js {10-11, 22-23}
 import { MockServer, FetchMocker } from "mentoss";
 import { expect } from "chai";
 
@@ -51,7 +51,7 @@ describe("My API", () => {
 
 	// reset the server after each test
 	afterEach(() => {
-		server.clear();
+		mocker.clearAll();
 	});
 
 	it("should return a 200 status code", async () => {
@@ -73,7 +73,7 @@ In this example, the `fetch()` function is extracted from the `mocker` instance 
 
 If you want to mock the global `fetch()` function, you can use the `mockGlobal()` and `unmockGlobal()` methods provided by the fetch mocker. Here's an example:
 
-```js {12-15, 22-25, 32-33}
+```js {12-15, 22-25, 31-32}
 import { MockServer, FetchMocker } from "mentoss";
 import { expect } from "chai";
 
@@ -92,7 +92,7 @@ describe("My API", () => {
 
 	// reset the server after each test
 	afterEach(() => {
-		server.clear();
+		mocker.clearAll();
 	});
 
 	// unmock the global fetch function

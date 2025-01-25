@@ -17,7 +17,7 @@ If you try to use a relative URL with `fetch()` in a server-side environment, yo
 
 Mentoss provides a way to mock browser requests in your tests, allowing you to test code that uses `fetch()` without making actual network requests. To mock a browser request, you can provide a `baseUrl` option to the `FetchMocker` constructor. This option specifies the base URL that relative URLs should be resolved against. You can then call a mocked `fetch()` using a relative URL. Here's an example:
 
-```js {10, 26-27}
+```js {10, 25-26}
 import { MockServer, FetchMocker } from "mentoss";
 import { expect } from "chai";
 
@@ -67,7 +67,7 @@ Another important consideration when mocking browser requests is how to handle C
 
 For [simple requests](https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS#simple_requests), Mentoss automatically includes the `Origin` header on the request. If the server responds with the appropriate `Access-Control-Allow-Origin` header, your code will receive the response as expected. If the server does not respond with the appropriate header, the request will fail. Here's an example:
 
-```js {20-22}
+```js {19-21}
 import { MockServer, FetchMocker } from "mentoss";
 
 const BASE_URL = "https://api.example.com";
@@ -107,7 +107,7 @@ In this example, the server responds with the `Access-Control-Allow-Origin` head
 
 For [preflighted requests](https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS#preflighted_requests), Mentoss automatically sends an `OPTIONS` request to the server to check if the request is allowed. If the server responds with the appropriate `Access-Control-Allow-Methods` and `Access-Control-Allow-Headers` headers, the original request will go through. If the server does not respond with the appropriate headers, the request will fail. Here's an example:
 
-```js {17-24}
+```js {16-23}
 import { MockServer, FetchMocker } from "mentoss";
 
 const BASE_URL = "https://api.example.com";

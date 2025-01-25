@@ -14,22 +14,30 @@ Mentoss is a utility for mocking JavaScript `fetch()` requests both in the brows
     <Tabs>
     	<TabItem label="npm">
     		<Fragment>
-    			```bash title="Install Dependencies" npm install mentoss -D ```
+    			```bash title="Install Dependencies"
+                npm install mentoss -D
+                ```
     		</Fragment>
     	</TabItem>
     	<TabItem label="pnpm">
     		<Fragment>
-    			```bash title="Install Dependencies" pnpm add mentoss -D ```
+    			```bash title="Install Dependencies"
+                pnpm add mentoss -D
+                ```
     		</Fragment>
     	</TabItem>
     	<TabItem label="yarn">
     		<Fragment>
-    			```bash title="Install Dependencies" yarn add mentoss -D ```
+    			```bash title="Install Dependencies"
+                yarn add mentoss -D
+                ```
     		</Fragment>
     	</TabItem>
     	<TabItem label="Bun">
     		<Fragment>
-    			```bash title="Install Dependencies" bun install mentoss -D ```
+    			```bash title="Install Dependencies"
+                bun install mentoss -D
+                ```
     		</Fragment>
     	</TabItem>
     </Tabs>
@@ -91,7 +99,7 @@ Mentoss is a utility for mocking JavaScript `fetch()` requests both in the brows
 
             // reset the server after each test
             afterEach(() => {
-                server.clear();
+                mocker.clearAll();
             });
 
             after(() => {
@@ -111,5 +119,4 @@ Mentoss is a utility for mocking JavaScript `fetch()` requests both in the brows
             });
         });
         ```
-
-    </Steps>
+</Steps>
