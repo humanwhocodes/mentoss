@@ -5,14 +5,13 @@ description: Learn how to use extended response patterns with a mock server
 
 The second argument of any route method in method in a `MockServer` instance is the response pattern. This pattern can be a number (the HTTP status to return) or an object specifying additional data to return with the response. This is helpful when you're making requests that expect a specific response format.
 
-
 ## Extended response pattern keys
 
 The following keys can be used in the response pattern object:
 
-* `status` (required) - the HTTP status code to return.
-* `headers` - HTTP headers to return with the response.
-* `body` - the body of the response to return. This can be a string, an object (which is treated as JSON), or an `ArrayBuffer`.
+-   `status` (required) - the HTTP status code to return.
+-   `headers` - HTTP headers to return with the response.
+-   `body` - the body of the response to return. This can be a string, an object (which is treated as JSON), or an `ArrayBuffer`.
 
 The response pattern keys are used to create a new `Response` object that is returned when the associated request pattern matches the request.
 
@@ -26,7 +25,7 @@ import { MockServer } from "mentoss";
 const server = new MockServer("https://api.example.com");
 
 server.get("/users", {
-    status: 200
+	status: 200,
 });
 ```
 
@@ -46,10 +45,10 @@ import { MockServer } from "mentoss";
 const server = new MockServer("https://api.example.com");
 
 server.get("/redirect", {
-    status: 301,
-    headers: {
-        Location: "https://example.com"
-    }
+	status: 301,
+	headers: {
+		Location: "https://example.com",
+	},
 });
 ```
 
@@ -65,11 +64,11 @@ import { MockServer } from "mentoss";
 const server = new MockServer("https://api.example.com");
 
 server.get("/users", {
-    status: 200,
-    body: {
-        id: 123,
-        name: "Alice"
-    }
+	status: 200,
+	body: {
+		id: 123,
+		name: "Alice",
+	},
 });
 ```
 
@@ -85,14 +84,14 @@ import { MockServer } from "mentoss";
 const server = new MockServer("https://api.example.com");
 
 server.get("/users", {
-    status: 200,
-    headers: {
-        "Content-Type": "application/json"
-    },
-    body: {
-        id: 123,
-        name: "Alice"
-    }
+	status: 200,
+	headers: {
+		"Content-Type": "application/json",
+	},
+	body: {
+		id: 123,
+		name: "Alice",
+	},
 });
 ```
 

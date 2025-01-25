@@ -8,6 +8,14 @@
 //-----------------------------------------------------------------------------
 
 import { stringifyRequest } from "./util.js";
+import {
+	isCorsSimpleRequest,
+	CorsPreflightData,
+	assertCorsResponse,
+	CORS_REQUEST_METHOD,
+	CORS_REQUEST_HEADERS,
+	CORS_ORIGIN,
+} from "./cors.js";
 
 //-----------------------------------------------------------------------------
 // Type Definitions
@@ -30,7 +38,6 @@ import { stringifyRequest } from "./util.js";
  * @returns {string} The formatted message.
  */
 function formatNoRouteMatchedMessage(request, body, traces) {
-	
 	return `No route matched for ${request.method} ${request.url}.
 
 Full Request:
@@ -39,16 +46,19 @@ ${stringifyRequest(request, body)}
 
 Partial matches:
 
-${traces.map(trace => {
-	
-	let traceMessage = `🚧 ${trace.route.toString()}:`;
-		
-	trace.messages.forEach(message => {
-		traceMessage += `\n  ${message}`;
-	});
-	
-	return traceMessage;
-}).join("\n\n") || "No partial matches found."}`;
+${
+	traces
+		.map(trace => {
+			let traceMessage = `🚧 ${trace.route.toString()}:`;
+
+			trace.messages.forEach(message => {
+				traceMessage += `\n  ${message}`;
+			});
+
+			return traceMessage;
+		})
+		.join("\n\n") || "No partial matches found."
+}`;
 }
 
 /**
@@ -60,15 +70,14 @@ ${traces.map(trace => {
  * @throws {TypeError} When the base URL is not a string or URL.
  */
 function createBaseUrl(baseUrl) {
-	
 	if (baseUrl === undefined) {
 		return undefined;
 	}
-	
+
 	if (baseUrl === "") {
 		throw new TypeError("Base URL cannot be an empty string.");
 	}
-	
+
 	if (baseUrl instanceof URL) {
 		return baseUrl;
 	}
@@ -76,8 +85,19 @@ function createBaseUrl(baseUrl) {
 	if (typeof baseUrl !== "string") {
 		throw new TypeError("Base URL must be a string or URL object.");
 	}
-	
+
 	return new URL(baseUrl);
+}
+
+/**
+ * Determines if two URL are of the same origin based on the same origin
+ * policy instituted by browsers.
+ * @param {URL} requestUrl The URL of the request.
+ * @param {URL} baseUrl The base URL to compare against.
+ * @returns {boolean} `true` if the URLs are of the same origin, `false` otherwise.
+ */
+function isSameOrigin(requestUrl, baseUrl) {
+	return requestUrl.origin === baseUrl.origin;
 }
 
 //-----------------------------------------------------------------------------
@@ -95,6 +115,12 @@ export class FetchMocker {
 	#servers = [];
 
 	/**
+	 * The CORS preflight data for each URL.
+	 * @type {Map<string, CorsPreflightData>}
+	 */
+	#corsPreflightData = new Map();
+
+	/**
 	 * The Response constructor to use.
 	 * @type {typeof Response}
 	 */
@@ -105,7 +131,7 @@ export class FetchMocker {
 	 * @type {typeof Request}
 	 */
 	#Request;
-	
+
 	/**
 	 * The base URL to use for relative URLs.
 	 * @type {URL|undefined}
@@ -145,43 +171,154 @@ export class FetchMocker {
 
 		// create the function here to bind to `this`
 		this.fetch = async (input, init) => {
-			
 			// adjust any relative URLs
-			const fixedInput = typeof input === "string" && this.#baseUrl
-				? new URL(input, this.#baseUrl).toString()
-				: input;
-			
+			const fixedInput =
+				typeof input === "string" && this.#baseUrl
+					? new URL(input, this.#baseUrl).toString()
+					: input;
+
 			const request = new this.#Request(fixedInput, init);
-			const allTraces = [];
+			let useCors = false;
+			let preflightData;
 
-			/*
-			 * Note: Each server gets its own copy of the request so that it
-			 * can read the body without interfering with any other servers.
-			 */
-			for (const server of this.#servers) {
-				const requestClone = request.clone();
-				const { response, traces } = await server.traceReceive(
-					requestClone,
-					this.#Response,
-				);
-				
-				if (response) {
-					return response;
-				}
-				
-				allTraces.push(...traces);
+			if (request.credentials === "include") {
+				throw new Error("Credentialed requests are not yet supported.");
 			}
-			
-			/*
-			 * To find possible traces, filter out all of the traces that only
-			 * have one message. This is because a single message means that
-			 * the URL wasn't matched, so there's no point in reporting that.
-			 */
-			const possibleTraces = allTraces.filter(trace => trace.messages.length > 1);
 
-			// throw an error saying the route wasn't matched
-			throw new Error(formatNoRouteMatchedMessage(request, init?.body, possibleTraces));
+			// if there's a base URL then we need to check for CORS
+			if (this.#baseUrl) {
+				const requestUrl = new URL(request.url);
+
+				if (!isSameOrigin(requestUrl, this.#baseUrl)) {
+					useCors = true;
+
+					// if it's not a simple request then we'll need a preflight check
+					if (!isCorsSimpleRequest(request)) {
+						preflightData = await this.#preflightFetch(request);
+						preflightData.validate(request);
+					}
+
+					// add the origin header to the request
+					request.headers.append("origin", this.#baseUrl.origin);
+
+					// if the preflight response is successful, then we can make the actual request
+				}
+			}
+
+			const response = await this.#internalFetch(request, init?.body);
+
+			if (useCors && this.#baseUrl) {
+				assertCorsResponse(response, this.#baseUrl.origin);
+			}
+
+			return response;
 		};
+	}
+
+	/**
+	 * An internal fetch() implementation that runs against the given servers.
+	 * @param {Request} request The request to fetch.
+	 * @param {string|any|FormData|null} body The body of the request.
+	 * @returns {Promise<Response>} The response from the fetch.
+	 * @throws {Error} When no route is matched.
+	 */
+	async #internalFetch(request, body = null) {
+		const allTraces = [];
+
+		/*
+		 * Note: Each server gets its own copy of the request so that it
+		 * can read the body without interfering with any other servers.
+		 */
+		for (const server of this.#servers) {
+			const requestClone = request.clone();
+			const { response, traces } = await server.traceReceive(
+				requestClone,
+				this.#Response,
+			);
+
+			if (response) {
+				return response;
+			}
+
+			allTraces.push(...traces);
+		}
+
+		/*
+		 * To find possible traces, filter out all of the traces that only
+		 * have one message. This is because a single message means that
+		 * the URL wasn't matched, so there's no point in reporting that.
+		 */
+		const possibleTraces = allTraces.filter(
+			trace => trace.messages.length > 1,
+		);
+
+		// throw an error saying the route wasn't matched
+		throw new Error(
+			formatNoRouteMatchedMessage(request, body, possibleTraces),
+		);
+	}
+
+	/**
+	 * Creates a preflight request for a URL.
+	 * @param {Request} request The request to create a preflight request for.
+	 * @returns {Request} The preflight request.
+	 * @throws {Error} When there is no base URL.
+	 */
+	#createPreflightRequest(request) {
+		if (!this.#baseUrl) {
+			throw new Error(
+				"Cannot create preflight request without a base URL.",
+			);
+		}
+
+		return new this.#Request(request.url, {
+			method: "OPTIONS",
+			headers: {
+				[CORS_REQUEST_METHOD]: request.method,
+				[CORS_REQUEST_HEADERS]: [...request.headers.keys()].join(","),
+				[CORS_ORIGIN]: this.#baseUrl.origin,
+			},
+		});
+	}
+
+	/**
+	 * Fetches the preflight data for a URL. Uses the local cache if available,
+	 * otherwise fetches the data from the server.
+	 * @param {Request} request The request to fetch preflight data for.
+	 * @returns {Promise<CorsPreflightData>} The preflight data for the URL.
+	 */
+	async #preflightFetch(request) {
+		if (!this.#baseUrl) {
+			throw new Error("Cannot fetch preflight data without a base URL.");
+		}
+
+		// first check the cache
+		let preflightData = this.#corsPreflightData.get(request.url);
+
+		if (preflightData) {
+			return preflightData;
+		}
+
+		// create the preflight request
+		const preflightRequest = this.#createPreflightRequest(request);
+		const preflightResponse = await this.#internalFetch(preflightRequest);
+
+		// if the preflight response is successful, then we can make the actual request
+		if (!preflightResponse.ok) {
+			throw new Error(
+				`Request to ${preflightRequest.url} from ${this.#baseUrl.origin} is blocked by CORS policy:  Response to preflight request doesn't pass access control check: It does not have HTTP ok status.`,
+			);
+		}
+
+		assertCorsResponse(preflightResponse, this.#baseUrl.origin);
+
+		// create the preflight data
+		preflightData = new CorsPreflightData(preflightResponse.headers);
+
+		// cache the preflight data
+		this.#corsPreflightData.set(preflightRequest.url, preflightData);
+
+		return preflightData;
 	}
 
 	/**
@@ -220,5 +357,24 @@ export class FetchMocker {
 	 */
 	unmockGlobal() {
 		globalThis.fetch = this.#globalFetch;
+	}
+
+	/**
+	 * Clears the CORS preflight cache.
+	 * @returns {void}
+	 */
+	clearPreflightCache() {
+		this.#corsPreflightData.clear();
+	}
+
+	/**
+	 * Clears all data from the fetch mocker. This include the CORS preflight
+	 * cache as well as the routes on the servers. The servers themselves
+	 * remain intact.
+	 * @returns {void}
+	 */
+	clearAll() {
+		this.#servers.forEach(server => server.clear());
+		this.clearPreflightCache();
 	}
 }

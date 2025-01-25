@@ -9,11 +9,11 @@ The first argument of any route method in a `MockServer` instance is the request
 
 The following keys can be used in the request pattern object:
 
-* `url` (required) - the URL to match.
-* `query` - query string parameters to match. Note that any URL containing all of the query string parameters is considered a match, even if the URL contains more query string parameters then are mentioned in the request pattern.
-* `params` - URL parameters to match. Used when the URL contains placeholders such as `:userId`.
-* `headers` - HTTP headers to match. Similar to `query`, a request containing all headers in the request pattern is considered a match even if the request contains additional headers.
-* `body` - the body of the request to match. This can be a string, `FormData`, or an object (in which case it's treated as JSON). For objects and `FormData`, the matching works similar to `query` and `headers`.
+-   `url` (required) - the URL to match.
+-   `query` - query string parameters to match. Note that any URL containing all of the query string parameters is considered a match, even if the URL contains more query string parameters then are mentioned in the request pattern.
+-   `params` - URL parameters to match. Used when the URL contains placeholders such as `:userId`.
+-   `headers` - HTTP headers to match. Similar to `query`, a request containing all headers in the request pattern is considered a match even if the request contains additional headers.
+-   `body` - the body of the request to match. This can be a string, `FormData`, or an object (in which case it's treated as JSON). For objects and `FormData`, the matching works similar to `query` and `headers`.
 
 You can use any combination of these keys to create a request pattern that matches the requests to which you'd like to respond.
 
@@ -26,12 +26,15 @@ import { MockServer } from "mentoss";
 
 const server = new MockServer("https://api.example.com");
 
-server.get({
-    url: "/users",
-    query: {
-        userId: "123"
-    }
-}, 200);
+server.get(
+	{
+		url: "/users",
+		query: {
+			userId: "123",
+		},
+	},
+	200,
+);
 ```
 
 This route will match any GET request to `/users` that contains a query parameter `userId` with the value `123`. For example, a request to `https://api.example.com/users?userId=123` will match this route.
@@ -45,12 +48,15 @@ import { MockServer } from "mentoss";
 
 const server = new MockServer("https://api.example.com");
 
-server.get({
-    url: "/users/:userId",
-    params: {
-        userId: "123"
-    }
-}, 200);
+server.get(
+	{
+		url: "/users/:userId",
+		params: {
+			userId: "123",
+		},
+	},
+	200,
+);
 ```
 
 This route will match any GET request to `/users/:userId` where the `userId` parameter is `123`. For example, a request to `https://api.example.com/users/123` will match this route but a request to `https://api.example.com/users/456` will not.
@@ -64,12 +70,15 @@ import { MockServer } from "mentoss";
 
 const server = new MockServer("https://api.example.com");
 
-server.get({
-    url: "/users",
-    headers: {
-        "Authorization": "Bearer token"
-    }
-}, 200);
+server.get(
+	{
+		url: "/users",
+		headers: {
+			Authorization: "Bearer token",
+		},
+	},
+	200,
+);
 ```
 
 This route will match any GET request to `/users` that contains an `Authorization` header with the value `Bearer token`.
@@ -83,12 +92,15 @@ import { MockServer } from "mentoss";
 
 const server = new MockServer("https://api.example.com");
 
-server.post({
-    url: "/users",
-    body: {
-        name: "John Doe"
-    }
-}, 200);
+server.post(
+	{
+		url: "/users",
+		body: {
+			name: "John Doe",
+		},
+	},
+	200,
+);
 ```
 
 This route will match any POST request to `/users` that contains a JSON body with the `name` property set to `John Doe`. There's no need to set a specific `Content-Type` header; the matching is done based on the body content.
@@ -102,18 +114,21 @@ import { MockServer } from "mentoss";
 
 const server = new MockServer("https://api.example.com");
 
-server.post({
-    url: "/users/:userId",
-    params: {
-        userId: "123"
-    },
-    headers: {
-        "Content-Type": "application/json",
-    },
-    body: {
-        name: "John Doe"
-    }
-}, 200);
+server.post(
+	{
+		url: "/users/:userId",
+		params: {
+			userId: "123",
+		},
+		headers: {
+			"Content-Type": "application/json",
+		},
+		body: {
+			name: "John Doe",
+		},
+	},
+	200,
+);
 ```
 
 This route will match any POST request to `/users/:userId` where the `userId` parameter is `123`, the request contains a `Content-Type` header with the value `application/json`, and the request body is a JSON object with the `name` property set to `John Doe`.
