@@ -94,3 +94,9 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
+
+## Prior Art
+
+- [Nock](https://github.com/nock/nock) - HTTP server mocking and expectations library for Node.js.
+- [MSW (Mock Service Worker)](https://mswjs.io/) - API mocking library for browser and Node.js.
+- [Fetch Mock](http://www.wheresrhys.co.uk/fetch-mock/) - Mock HTTP requests made using `fetch`.
