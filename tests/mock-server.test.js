@@ -10,7 +10,7 @@
 //-----------------------------------------------------------------------------
 
 import assert from "node:assert";
-import { MockServer } from "../src/mock-server.js";
+import { MockServer, assertValidRequestPattern } from "../src/mock-server.js";
 
 //-----------------------------------------------------------------------------
 // Data
@@ -447,6 +447,26 @@ describe("MockServer", () => {
 				"✅ URL matches.",
 				"❌ Method does not match. Expected POST but received OPTIONS.",
 			]);
+		});
+
+		it("should return JSON response when body is object", async () => {
+			server.get("/test", {
+				status: 200,
+				body: { foo: "bar" },
+			});
+
+			const request = createRequest({
+				method: "GET",
+				url: `${BASE_URL}/test`,
+			});
+
+			const { response } = await server.traceReceive(request);
+			assert.strictEqual(response.status, 200);
+			assert.strictEqual(response.statusText, "OK");
+			assert.strictEqual(
+				response.headers.get("content-type"),
+				"application/json",
+			);
 		});
 	});
 
@@ -924,6 +944,124 @@ describe("MockServer", () => {
 
 			await server.receive(request);
 			server.assertAllRoutesCalled();
+		});
+	});
+
+	describe("assertValidRequestPattern", () => {
+		it("should throw if url is empty", () => {
+			assert.throws(
+				() => {
+					assertValidRequestPattern({
+						url: "",
+						method: "GET",
+					});
+				},
+				{ message: "Request pattern must include a URL." },
+			);
+		});
+
+		it("should throw if method is empty", () => {
+			assert.throws(
+				() => {
+					assertValidRequestPattern({
+						url: BASE_URL,
+						method: "",
+					});
+				},
+				{ message: "Request pattern must include a method." },
+			);
+		});
+
+		it("should throw if method is not a string", () => {
+			assert.throws(
+				() => {
+					assertValidRequestPattern({
+						url: BASE_URL,
+						method: 303,
+					});
+				},
+				{ message: "Request pattern method must be a string." },
+			);
+		});
+
+		it("should throw if URL is not a string", () => {
+			assert.throws(
+				() => {
+					assertValidRequestPattern({
+						url: 303,
+						method: "GET",
+					});
+				},
+				{ message: "Request pattern URL must be a string." },
+			);
+		});
+
+		it("should throw if headers is not an object", () => {
+			assert.throws(
+				() => {
+					assertValidRequestPattern({
+						url: BASE_URL,
+						method: "GET",
+						headers: 808,
+					});
+				},
+				{ message: "Request pattern headers must be an object." },
+			);
+		});
+
+		it("should throw if body is not a string, object, or FormData", () => {
+			assert.throws(
+				() => {
+					assertValidRequestPattern({
+						url: BASE_URL,
+						method: "GET",
+						body: 303,
+					});
+				},
+				{
+					message:
+						"Request pattern body must be a string, object, or FormData.",
+				},
+			);
+		});
+
+		it("should be valid with string body", () => {
+			assert.doesNotThrow(() => {
+				assertValidRequestPattern({
+					url: BASE_URL,
+					method: "GET",
+					body: "some data",
+				});
+			});
+		});
+
+		it("should be valid with object body", () => {
+			assert.doesNotThrow(() => {
+				assertValidRequestPattern({
+					url: BASE_URL,
+					method: "GET",
+					body: { some: "data" },
+				});
+			});
+		});
+
+		it("should be valid with FormData body", () => {
+			assert.doesNotThrow(() => {
+				assertValidRequestPattern({
+					url: BASE_URL,
+					method: "GET",
+					body: new FormData(),
+				});
+			});
+		});
+
+		it("should be valid with URL and method", () => {
+			assert.doesNotThrow(() => {
+				assertValidRequestPattern({
+					url: BASE_URL,
+					method: "GET",
+				});
+			});
 		});
 	});
 });
