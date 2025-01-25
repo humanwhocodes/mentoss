@@ -8,6 +8,10 @@ If you find this useful, please consider supporting my work with a [donation](ht
 
 A utility for mocking out `fetch()` requests and responses.
 
+## Documentation
+
+See the [website](https://mentoss.dev).
+
 ## Installation
 
 ```shell
@@ -77,6 +81,37 @@ assert(mocker.allRoutesCalled());
 
 // clear the server to start over
 server.clear();
+
+// clear everything in the mocker (including servers)
+mocker.clearAll();
+```
+
+## Development
+
+To work on Mentoss, you'll need:
+
+* [Git](https://git-scm.com/)
+* [Node.js](https://nodejs.org)
+
+Make sure both are installed by visiting the links and following the instructions to install.
+
+Now you're ready to clone the repository:
+
+```bash
+git clone https://github.com/humanwhocodes/mentoss.git
+```
+
+Then, enter the directory and install the dependencies:
+
+```bash
+cd mentoss
+npm install
+```
+
+After that, you can run the tests via:
+
+```bash
+npm test
 ```
 
 ## License
@@ -87,7 +122,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -97,6 +132,18 @@ limitations under the License.
 
 ## Prior Art
 
+This project takes inspiration (but not code) from a number of other projects:
+
 - [Nock](https://github.com/nock/nock) - HTTP server mocking and expectations library for Node.js.
 - [MSW (Mock Service Worker)](https://mswjs.io/) - API mocking library for browser and Node.js.
 - [Fetch Mock](http://www.wheresrhys.co.uk/fetch-mock/) - Mock HTTP requests made using `fetch`.
+
+## License
+
+Apache 2.0
+
+## Frequently Asked Questions
+
+### What does "Mentoss" even mean?
+
+One day, I was sitting around thinking, "you know, I really wish there was a better fetch mocker." Then I thought, "fetch mocker" sounds a lot like "fresh maker," like the [old Mentos commercial](https://www.youtube.com/watch?v=JqgqgcE8Zck). Then I thought, you can't just name a package "fetch mocker" because it's too generic. I'd like to call it Mentos as a joke, but then I worried about the company coming after me for trademark infringement. So I figured I'd add an "s" at the end, to make "OSS" the suffix.
