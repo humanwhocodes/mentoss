@@ -71,6 +71,10 @@ Partial matches:
   ✅ Method matches: POST.
   ❌ Headers do not match. Expected authorization=Bearer ABC but received authorization=Bearer XYZ.`.trim();
 
+const PREFLIGHT_FAILED = `
+Request to https://api.example.com/hello from https://api.example.org is blocked by CORS policy:  Response to preflight request doesn't pass access control check: It does not have HTTP ok status.
+`.trim();
+
 //-----------------------------------------------------------------------------
 // Tests
 //-----------------------------------------------------------------------------
@@ -255,6 +259,34 @@ describe("FetchMocker", () => {
 		);
 	});
 
+	it("should throw when base URL is empty", () => {
+		const server = new MockServer(BASE_URL);
+
+		assert.throws(
+			() => {
+				new FetchMocker({
+					servers: [server],
+					baseUrl: "",
+				});
+			},
+			{ message: "Base URL cannot be an empty string." },
+		);
+	});
+
+	it("should throw when base URL is not a string or URL", () => {
+		const server = new MockServer(BASE_URL);
+
+		assert.throws(
+			() => {
+				new FetchMocker({
+					servers: [server],
+					baseUrl: 303,
+				});
+			},
+			{ message: "Base URL must be a string or URL object." },
+		);
+	});
+
 	describe("called()", () => {
 		it("should return true when a request has been matched by a server", async () => {
 			const server = new MockServer(BASE_URL);
@@ -299,6 +331,26 @@ describe("FetchMocker", () => {
 
 			await fetchMocker.fetch(BASE_URL + "/hello");
 			assert.ok(!fetchMocker.called(BASE_URL + "/goodbye"));
+		});
+
+		it("should return true when a request object has been matched by a server", async () => {
+			const server = new MockServer(BASE_URL);
+			const fetchMocker = new FetchMocker({
+				servers: [server],
+			});
+
+			server.get("/hello", {
+				status: 200,
+				body: "Hello world!",
+			});
+
+			await fetchMocker.fetch(BASE_URL + "/hello");
+			assert.ok(
+				fetchMocker.called({
+					method: "GET",
+					url: BASE_URL + "/hello",
+				}),
+			);
 		});
 	});
 
@@ -365,6 +417,19 @@ describe("FetchMocker", () => {
 			const fetchMocker = new FetchMocker({
 				servers: [server],
 				baseUrl: BASE_URL,
+			});
+
+			server.get("/hello", 200);
+
+			const response = await fetchMocker.fetch("/hello");
+			assert.strictEqual(response.status, 200);
+		});
+
+		it("should return 200 when using a relative URL and a baseUrl URL()", async () => {
+			const server = new MockServer(BASE_URL);
+			const fetchMocker = new FetchMocker({
+				servers: [server],
+				baseUrl: new URL(BASE_URL),
 			});
 
 			server.get("/hello", 200);
@@ -621,6 +686,41 @@ describe("FetchMocker", () => {
 
 					assert.strictEqual(response.status, 200);
 				});
+
+				it("should throw when the preflight request fails", async () => {
+					const server = new MockServer(BASE_URL);
+					const fetchMocker = new FetchMocker({
+						servers: [server],
+						baseUrl: ALT_BASE_URL,
+					});
+					const url = new URL("/hello", BASE_URL);
+					const origin = new URL(ALT_BASE_URL).origin;
+
+					server.get("/hello", {
+						status: 200,
+						headers: {
+							"Access-Control-Allow-Origin": origin,
+						},
+					});
+
+					server.options("/hello", {
+						status: 500,
+						headers: {
+							"Access-Control-Allow-Origin": origin,
+							"Access-Control-Allow-Headers": "*",
+						},
+					});
+
+					await assert.rejects(
+						async () => {
+							await fetchMocker.fetch(url, {
+								method: "GET",
+								headers: { Foo: "Bar" },
+							});
+						},
+						{ message: PREFLIGHT_FAILED },
+					);
+				});
 			});
 
 			describe("Access-Control-Allow-Methods", () => {
@@ -875,6 +975,45 @@ describe("FetchMocker", () => {
 					);
 				});
 			});
+		});
+	});
+
+	describe("mockGlobal", () => {
+		it("should replace global fetch", () => {
+			const server = new MockServer(BASE_URL);
+			const fetchMocker = new FetchMocker({
+				servers: [server],
+			});
+
+			const originalFetch = globalThis.fetch;
+
+			try {
+				fetchMocker.mockGlobal();
+
+				assert.strictEqual(globalThis.fetch, fetchMocker.fetch);
+			} finally {
+				globalThis.fetch = originalFetch;
+			}
+		});
+	});
+
+	describe("unmockGlobal", () => {
+		it("should restore global fetch", () => {
+			const server = new MockServer(BASE_URL);
+			const fetchMocker = new FetchMocker({
+				servers: [server],
+			});
+
+			const originalFetch = globalThis.fetch;
+
+			try {
+				fetchMocker.mockGlobal();
+				fetchMocker.unmockGlobal();
+
+				assert.strictEqual(globalThis.fetch, originalFetch);
+			} finally {
+				globalThis.fetch = originalFetch;
+			}
 		});
 	});
 });
