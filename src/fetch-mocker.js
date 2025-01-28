@@ -171,6 +171,16 @@ export class FetchMocker {
 
 		// create the function here to bind to `this`
 		this.fetch = async (input, init) => {
+			
+			// first check to see if the request has been aborted
+			const signal = init?.signal;
+			signal?.throwIfAborted();
+			
+			// assign an event handler to listen for abort events
+			signal?.addEventListener("abort", () => {
+				throw signal?.reason ?? new Error("Fetch aborted");
+			});
+			
 			// adjust any relative URLs
 			const fixedInput =
 				typeof input === "string" && this.#baseUrl
@@ -204,7 +214,7 @@ export class FetchMocker {
 					// if the preflight response is successful, then we can make the actual request
 				}
 			}
-
+			
 			const response = await this.#internalFetch(request, init?.body);
 
 			if (useCors && this.#baseUrl) {

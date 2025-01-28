@@ -3,6 +3,8 @@
  * @autor Nicholas C. Zakas
  */
 
+/* global AbortSignal, queueMicrotask, AbortController */
+
 //-----------------------------------------------------------------------------
 // Imports
 //-----------------------------------------------------------------------------
@@ -1015,5 +1017,54 @@ describe("FetchMocker", () => {
 				globalThis.fetch = originalFetch;
 			}
 		});
+	});
+	
+	describe("Passing an AbortSignal", () => {
+		
+		it("should throw an abort error when passed an aborted signal", async () => {
+			const server = new MockServer(BASE_URL);
+			const fetchMocker = new FetchMocker({
+				servers: [server],
+			});
+
+			server.get("/hello", {
+				status: 200,
+				body: "Hello world!",
+			});
+
+			await assert.rejects(
+				fetchMocker.fetch(BASE_URL + "/hello", {
+					signal: AbortSignal.abort("Foo"),
+				}),
+				/Foo/,
+			);
+		});
+		
+		// need to have delayed responses for this to work
+		it.skip("should throw an abort error when the request is aborted", async () => {
+			const server = new MockServer(BASE_URL);
+			const fetchMocker = new FetchMocker({
+				servers: [server],
+			});
+
+			server.get("/hello", {
+				status: 200,
+				body: "Hello world!",
+			});
+
+			const controller = new AbortController();
+
+			queueMicrotask(() => controller.abort());
+			
+			const request = fetchMocker.fetch(BASE_URL + "/hello", {
+				signal: controller.signal,
+			});
+			
+			await assert.rejects(
+				request,
+				/AbortError/,
+			);
+		});
+		
 	});
 });
