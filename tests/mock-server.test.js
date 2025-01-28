@@ -3,7 +3,7 @@
  * @author Nicholas C. Zakas
  */
 
-/* globals FormData, Request */
+/* globals FormData, Request, TextEncoder */
 
 //-----------------------------------------------------------------------------
 // Imports
@@ -36,6 +36,9 @@ function createRequest({ method, url, headers = {}, body = undefined }) {
 	if (body !== undefined) {
 		if (body instanceof FormData) {
 			requestInit.body = body;
+		} else if (body instanceof ArrayBuffer) {
+			requestInit.body = body;
+			requestInit.headers["content-type"] = "application/octet-stream";
 		} else if (typeof body === "object") {
 			requestInit.body = JSON.stringify(body);
 			requestInit.headers["content-type"] = "application/json";
@@ -54,10 +57,15 @@ function createRequest({ method, url, headers = {}, body = undefined }) {
  */
 async function getResponseBody(response) {
 	const contentType = response.headers.get("content-type");
-	if (contentType && contentType.includes("application/json")) {
+	if (contentType?.includes("application/json")) {
 		return response.json();
 	}
-	return response.text();
+	
+	if (contentType?.includes("text")) {
+		return response.text();
+	}
+	
+	return response.arrayBuffer();
 }
 
 //-----------------------------------------------------------------------------
@@ -860,6 +868,49 @@ describe("MockServer", () => {
 				method: "POST",
 				url: `${BASE_URL}/submit`,
 				body: { key: "different" },
+			});
+
+			const response = await server.receive(request);
+			assert.strictEqual(response, undefined);
+		});
+		
+		it("should match the request when the body is an ArrayBuffer", async () => {
+			
+			const buffer = new TextEncoder().encode("Created").buffer;
+			
+			server.post(
+				{ url: "/submit", body: buffer },
+				{ status: 201, body: "Created" },
+			);
+
+			const request = createRequest({
+				method: "POST",
+				url: `${BASE_URL}/submit`,
+				body: new TextEncoder().encode("Created").buffer,
+			});
+
+			const response = await server.receive(request);
+			assert.strictEqual(response.status, 201);
+			assert.strictEqual(response.statusText, "Created");
+			assert.strictEqual(await getResponseBody(response), "Created");
+		});
+		
+		it("should not match the request when a different ArrayBuffer is used", async () => {
+			const buffer = new TextEncoder().encode("Created").buffer;
+			const differentBuffer = new TextEncoder().encode("Different").buffer;
+
+			server.post(
+				{ url: "/submit", body: buffer },
+				{ status: 201, body: "Created" },
+			);
+
+			const request = createRequest({
+				method: "POST",
+				url: `${BASE_URL}/submit`,
+				headers: {
+					"content-type": "application/octet-stream"
+				},
+				body: differentBuffer,
 			});
 
 			const response = await server.receive(request);
