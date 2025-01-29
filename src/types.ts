@@ -14,6 +14,8 @@ export interface RequestPattern {
 	body?: HttpBody;
 }
 
+export type MethodlessRequestPattern = Omit<RequestPattern, "method">;
+
 export interface ResponsePattern {
 	status: number;
 	headers?: Record<string, string>;
