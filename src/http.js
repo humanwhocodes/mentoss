@@ -71,3 +71,15 @@ export const statusTexts = new Map([
 	[510, "Not Extended"],
 	[511, "Network Authentication Required"],
 ]);
+
+export const verbs = [
+	"GET",
+	"POST",
+	"PUT",
+	"DELETE",
+	"PATCH",
+	"HEAD",
+	"OPTIONS",
+	// "CONNECT",
+	// "TRACE"
+];

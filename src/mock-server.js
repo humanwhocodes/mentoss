@@ -18,6 +18,7 @@ import { getBody } from "./util.js";
 //-----------------------------------------------------------------------------
 
 /** @typedef {import("./types.js").RequestPattern} RequestPattern */
+/** @typedef {import("./types.js").MethodlessRequestPattern} MethodlessRequestPattern */
 /** @typedef {import("./types.js").ResponsePattern} ResponsePattern */
 
 /**
@@ -37,7 +38,7 @@ import { getBody } from "./util.js";
  * @returns {void}
  * @throws {TypeError} If the request pattern is invalid.
  */
-export function assertValidRequestPattern(requestPattern) {
+function assertValidRequestPattern(requestPattern) {
 	if (!requestPattern.url) {
 		throw new TypeError("Request pattern must include a URL.");
 	}
@@ -66,6 +67,56 @@ export function assertValidRequestPattern(requestPattern) {
 		if (!isString && !isObject && !isFormData) {
 			throw new TypeError(
 				"Request pattern body must be a string, object, or FormData.",
+			);
+		}
+	}
+}
+
+/**
+ * Asserts that a request pattern does not have a method.
+ * @param {any} request The request pattern to check.
+ * @returns {void}
+ * @throws {TypeError} If the request pattern has a method.
+ */
+function assertNoMethod(request) {
+	if (request.method) {
+		throw new TypeError("Request pattern must not include a method.");
+	}
+}
+
+/**
+ * Asserts that a response pattern is valid.
+ * @param {ResponsePattern} responsePattern The response pattern to check.
+ * @returns {void}
+ * @throws {TypeError} If the response pattern is invalid.
+ */
+function assertValidResponsePattern(responsePattern) {
+	
+	if (!("status" in responsePattern)) {
+		throw new TypeError("Response pattern must include a status.");
+	}
+	
+	if (responsePattern.status && typeof responsePattern.status !== "number") {
+		throw new TypeError("Response pattern status must be a number.");
+	}
+	
+	if (responsePattern.status && !statusTexts.has(responsePattern.status)) {
+		throw new TypeError(`Response pattern status ${responsePattern.status} is not a valid HTTP status code.`);
+	}
+
+	if (responsePattern.headers && typeof responsePattern.headers !== "object") {
+		throw new TypeError("Response pattern headers must be an object.");
+	}
+	
+	if (responsePattern.body) {
+		const isString = typeof responsePattern.body === "string";
+		const isObject = typeof responsePattern.body === "object";
+		const isFormData = responsePattern.body instanceof FormData;
+		const isArrayBuffer = responsePattern.body instanceof ArrayBuffer;
+		
+		if (!isString && !isFormData && !isArrayBuffer && !isObject) {
+			throw new TypeError(
+				"Response pattern body must be a string, object, ArrayBuffer, or FormData.",
 			);
 		}
 	}
@@ -237,14 +288,22 @@ export class MockServer {
 			typeof request === "string" ? { url: request } : request;
 		const routeResponse =
 			typeof response === "number" ? { status: response } : response;
+			
+		const requestPattern = /** @type {RequestPattern} */ ({
+			method,
+			...routeRequest,
+		});
+
+		assertValidRequestPattern(requestPattern);
+		
+		const responsePattern = /** @type {ResponsePattern} */ (routeResponse);
+		
+		assertValidResponsePattern(responsePattern);
 
 		this.#unmatchedRoutes.push(
 			new Route({
-				request: /** @type {RequestPattern} */ ({
-					method,
-					...routeRequest,
-				}),
-				response: /** @type {ResponsePattern} */ (routeResponse),
+				request: requestPattern,
+				response: responsePattern,
 				baseUrl: this.baseUrl,
 			}),
 		);
@@ -266,64 +325,71 @@ export class MockServer {
 
 	/**
 	 * Adds a new route that responds to a POST request.
-	 * @param {RequestPattern|string} request The request to match.
+	 * @param {MethodlessRequestPattern|string} request The request to match.
 	 * @param {ResponsePattern|number} response The response to return.
 	 */
 	post(request, response) {
+		assertNoMethod(request);
 		this.#addRoute("POST", request, response);
 	}
 
 	/**
 	 * Adds a new route that responds to a GET request.
-	 * @param {RequestPattern|string} request The request to match.
+	 * @param {MethodlessRequestPattern|string} request The request to match.
 	 * @param {ResponsePattern|number} response The response to return.
 	 */
 	get(request, response) {
+		assertNoMethod(request);
 		this.#addRoute("GET", request, response);
 	}
 
 	/**
 	 * Adds a new route that responds to a PUT request.
-	 * @param {RequestPattern|string} request The request to match.
+	 * @param {MethodlessRequestPattern|string} request The request to match.
 	 * @param {ResponsePattern|number} response The response to return.
 	 */
 	put(request, response) {
+		assertNoMethod(request);
 		this.#addRoute("PUT", request, response);
 	}
 
 	/**
 	 * Adds a new route that responds to a DELETE request.
-	 * @param {RequestPattern|string} request The request to match.
+	 * @param {MethodlessRequestPattern|string} request The request to match.
 	 * @param {ResponsePattern|number} response The response to return.
 	 */
 	delete(request, response) {
+		assertNoMethod(request);
 		this.#addRoute("DELETE", request, response);
 	}
 
 	/**
 	 * Adds a new route that responds to a PATCH request.
-	 * @param {RequestPattern|string} request The request to match.
+	 * @param {MethodlessRequestPattern|string} request The request to match.
 	 * @param {ResponsePattern|number} response The response to return.
 	 */
 	patch(request, response) {
+		assertNoMethod(request);
 		this.#addRoute("PATCH", request, response);
 	}
 
 	/**
 	 * Adds a new route that responds to a HEAD request.
-	 * @param {RequestPattern|string} request The request to match.
+	 * @param {MethodlessRequestPattern|string} request The request to match.
 	 * @param {ResponsePattern|number} response The response to return.
 	 */
 	head(request, response) {
+		assertNoMethod(request);
 		this.#addRoute("HEAD", request, response);
 	}
 
 	/**
 	 * Adds a new route that responds to an OPTIONS request.
-	 * @param {RequestPattern|string} request The request to match.
+	 * @param {MethodlessRequestPattern|string} request The request to match.
 	 * @param {ResponsePattern|number} response The response to return.
 	 */
 	options(request, response) {
+		assertNoMethod(request);
 		this.#addRoute("OPTIONS", request, response);
 	}
 
