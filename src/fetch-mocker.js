@@ -15,6 +15,7 @@ import {
 	CORS_REQUEST_METHOD,
 	CORS_REQUEST_HEADERS,
 	CORS_ORIGIN,
+	CorsError
 } from "./cors.js";
 
 //-----------------------------------------------------------------------------
@@ -205,7 +206,7 @@ export class FetchMocker {
 					// if it's not a simple request then we'll need a preflight check
 					if (!isCorsSimpleRequest(request)) {
 						preflightData = await this.#preflightFetch(request);
-						preflightData.validate(request);
+						preflightData.validate(request, this.#baseUrl.origin);
 					}
 
 					// add the origin header to the request
@@ -315,9 +316,7 @@ export class FetchMocker {
 
 		// if the preflight response is successful, then we can make the actual request
 		if (!preflightResponse.ok) {
-			throw new Error(
-				`Request to ${preflightRequest.url} from ${this.#baseUrl.origin} is blocked by CORS policy:  Response to preflight request doesn't pass access control check: It does not have HTTP ok status.`,
-			);
+			throw new CorsError(preflightRequest.url, this.#baseUrl.origin, "Response to preflight request doesn't pass access control check: It does not have HTTP ok status.");
 		}
 
 		assertCorsResponse(preflightResponse, this.#baseUrl.origin);

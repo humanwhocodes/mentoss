@@ -88,6 +88,28 @@ function isSimpleRangeHeader(range) {
 //-----------------------------------------------------------------------------
 
 /**
+ * Represents an error that occurs when a CORS request is blocked.
+ */
+export class CorsError extends Error {
+	
+	/**
+	 * The name of the error.
+	 * @type {string}
+	 */
+	name = "CorsError";
+	
+	/**
+	 * Creates a new instance.
+	 * @param {string} requestUrl The URL of the request.
+	 * @param {string} origin The origin of the client making the request.
+	 * @param {string} message The error message.
+	 */
+	constructor(requestUrl, origin, message) {
+		super(`Access to fetch at '${requestUrl}' from origin '${origin}' has been blocked by CORS policy: ${message}`);
+	}
+}
+
+/**
  * Asserts that the response has the correct CORS headers.
  * @param {Response} response The response to check.
  * @param {string} origin The origin to check against.
@@ -98,14 +120,18 @@ export function assertCorsResponse(response, origin) {
 	const originHeader = response.headers.get(CORS_ALLOW_ORIGIN);
 
 	if (!originHeader) {
-		throw new Error(
-			`Access to fetch at '${response.url}' from origin '${origin}' has been blocked by CORS policy: Response to preflight request doesn't pass access control check: No 'Access-Control-Allow-Origin' header is present on the requested resource.`,
+		throw new CorsError(
+			response.url,
+			origin,
+			"Response to preflight request doesn't pass access control check: No 'Access-Control-Allow-Origin' header is present on the requested resource."
 		);
 	}
 
 	if (originHeader !== "*" && originHeader !== origin) {
-		throw new Error(
-			`Access to fetch at '${response.url}' from origin '${origin}' has been blocked by CORS policy: The 'Access-Control-Allow-Origin' header has a value '${originHeader}' that is not equal to the supplied origin.`,
+		throw new CorsError(
+			response.url,
+			origin,
+			`The 'Access-Control-Allow-Origin' header has a value '${originHeader}' that is not equal to the supplied origin.`,
 		);
 	}
 
@@ -234,29 +260,39 @@ export class CorsPreflightData {
 
 	/**
 	 * Validates a method against the preflight data.
-	 * @param {string} method The method to validate.
+	 * @param {Request} request The request with the method to validate.
+	 * @param {string} origin The origin of the request.
 	 * @returns {void}
 	 * @throws {Error} When the method is not allowed.
 	 */
-	#validateMethod(method) {
+	#validateMethod(request, origin) {
+		
+		const method = request.method.toUpperCase();
+		
 		if (
 			!this.allowAllMethods &&
 			!corsSafeMethods.has(method) &&
 			!this.allowedMethods.has(method)
 		) {
-			throw new Error(
-				`Request is blocked by CORS policy: Method ${method} is not allowed.`,
+			throw new CorsError(
+				request.url,
+				origin,
+				`Method ${method} is not allowed.`,
 			);
 		}
 	}
 
 	/**
 	 * Validates a set of headers against the preflight data.
-	 * @param {Headers} headers The headers to validate.
+	 * @param {Request} request The request with headers to validate.
+	 * @param {string} origin The origin of the request.
 	 * @returns {void}
 	 * @throws {Error} When the headers are not allowed.
 	 */
-	#validateHeaders(headers) {
+	#validateHeaders(request, origin) {
+		
+		const { headers } = request;
+		
 		for (const header of headers.keys()) {
 			// simple headers are always allowed
 			if (corsSafeHeaders.has(header)) {
@@ -268,14 +304,18 @@ export class CorsPreflightData {
 				header === "authorization" &&
 				!this.allowedHeaders.has(header)
 			) {
-				throw new Error(
-					`Request is blocked by CORS policy: Header ${header} is not allowed.`,
+				throw new CorsError(
+					request.url,
+					origin,
+					`Header ${header} is not allowed.`,
 				);
 			}
 
 			if (!this.allowAllHeaders && !this.allowedHeaders.has(header)) {
-				throw new Error(
-					`Request is blocked by CORS policy: Header ${header} is not allowed.`,
+				throw new CorsError(
+					request.url,
+					origin,
+					`Header ${header} is not allowed.`,
 				);
 			}
 		}
@@ -284,11 +324,12 @@ export class CorsPreflightData {
 	/**
 	 * Validates a request against the preflight data.
 	 * @param {Request} request The request to validate.
+	 * @param {string} origin The origin of the request.
 	 * @returns {void}
 	 * @throws {Error} When the request is not allowed.
 	 */
-	validate(request) {
-		this.#validateMethod(request.method);
-		this.#validateHeaders(request.headers);
+	validate(request, origin) {
+		this.#validateMethod(request, origin);
+		this.#validateHeaders(request, origin);
 	}
 }
