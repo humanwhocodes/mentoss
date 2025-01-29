@@ -3,6 +3,8 @@ title: Extended Request Patterns
 description: Learn how to use extended request patterns with a mock server
 ---
 
+import { Aside } from "@astrojs/starlight/components";
+
 The first argument of any route method in a `MockServer` instance is the request pattern. This pattern can be a string or a an object with additional fields to match. This allows you to create more complex routes that match specific requests, which is useful when you have many requests that differ only slightly from each other.
 
 ## Extended request pattern keys
@@ -60,6 +62,10 @@ server.get(
 ```
 
 This route will match any GET request to `/users/:userId` where the `userId` parameter is `123`. For example, a request to `https://api.example.com/users/123` will match this route but a request to `https://api.example.com/users/456` will not.
+
+<Aside type="tip">
+You can use [URLPattern syntax](https://developer.mozilla.org/en-US/docs/Web/API/URL_Pattern_API#pattern_syntax) for more complex URL matching.
+</Aside>
 
 ## Matching a request with specific headers
 
