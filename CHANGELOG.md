@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.2.0](https://github.com/humanwhocodes/mentoss/compare/mentoss-v0.1.0...mentoss-v0.2.0) (2025-01-29)
+
+
+### Features
+
+* Support AbortSignal in fetch() ([#22](https://github.com/humanwhocodes/mentoss/issues/22)) ([12b6e72](https://github.com/humanwhocodes/mentoss/commit/12b6e72061fab308964e0748a9fe178ea76e2781))
+
+
+### Bug Fixes
+
+* **deps:** update dependency sharp to ^0.33.0 ([#11](https://github.com/humanwhocodes/mentoss/issues/11)) ([235ca34](https://github.com/humanwhocodes/mentoss/commit/235ca34579e8f0508749b34e96b88a48e475da48))
+* Ensure request ArrayBuffer body works ([#23](https://github.com/humanwhocodes/mentoss/issues/23)) ([b561ad7](https://github.com/humanwhocodes/mentoss/commit/b561ad73800549cef7e52d5ce3dd290eec862779))
+
 ## 0.1.0 (2025-01-25)
 
 ### Features
