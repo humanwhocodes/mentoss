@@ -3,7 +3,7 @@
  * @author Nicholas C. Zakas
  */
 
-/* global Response, FormData */
+/* global Response, FormData, setTimeout */
 
 //-----------------------------------------------------------------------------
 // Imports
@@ -232,6 +232,16 @@ export class Route {
 			},
 		});
 	}
+	
+	/**
+	 * Creates a delay as specified by the route's response pattern.
+	 * @returns {Promise<void>} A promise that resolves when the delay is over.
+	 */
+	async delay() {
+		if (this.#response.delay) {
+			await new Promise(resolve => setTimeout(resolve, this.#response.delay));
+		}
+	}
 
 	/**
 	 * Returns a string representation of the route.
@@ -443,6 +453,8 @@ export class MockServer {
 				 */
 				const response = route.createResponse(PreferredResponse);
 				Object.defineProperty(response, "url", { value: request.url });
+				
+				await route.delay();
 
 				return { response, traces };
 			}

@@ -12,6 +12,7 @@ The following keys can be used in the response pattern object:
 -   `status` (required) - the HTTP status code to return.
 -   `headers` - HTTP headers to return with the response.
 -   `body` - the body of the response to return. This can be a string, an object (which is treated as JSON), or an `ArrayBuffer`.
+-   `delay` - the number of milliseconds to wait before returning the response.
 
 The response pattern keys are used to create a new `Response` object that is returned when the associated request pattern matches the request.
 
@@ -96,3 +97,20 @@ server.get("/users", {
 ```
 
 This route will respond to any GET request to `/users` with a status code of 200, a `Content-Type` header of `application/json`, and a JSON response body containing an `id` and `name` property.
+
+## Delaying the response
+
+If you'd like to delay the response to a request, you can use the `delay` key in the response pattern object. The `delay` property is the number of milliseconds to wait before returning the response. Here's an example:
+
+```js
+import { MockServer } from "mentoss";
+
+const server = new MockServer("https://api.example.com");
+
+server.get("/users", {
+	status: 200,
+	delay: 1000, // delay the response by 1 second
+});
+```
+
+This route will respond to any GET request to `/users` with a status code of 200, but it will wait for 1 second before returning the response.

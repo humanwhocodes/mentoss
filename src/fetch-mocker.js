@@ -23,7 +23,6 @@ import {
 //-----------------------------------------------------------------------------
 
 /** @typedef {import("./types.js").RequestPattern} RequestPattern */
-/** @typedef {import("./types.js").ResponsePattern} ResponsePattern */
 /** @typedef {import("./mock-server.js").MockServer} MockServer */
 /** @typedef {import("./mock-server.js").Trace} Trace */
 
@@ -176,11 +175,11 @@ export class FetchMocker {
 			// first check to see if the request has been aborted
 			const signal = init?.signal;
 			signal?.throwIfAborted();
-			
-			// assign an event handler to listen for abort events
-			signal?.addEventListener("abort", () => {
-				throw signal?.reason ?? new Error("Fetch aborted");
-			});
+
+			// TODO: For some reason this causes Mocha tests to fail with "multiple done"
+			// signal?.addEventListener("abort", () => {
+			// 	throw new Error("Fetch was aborted.");
+			// });
 			
 			// adjust any relative URLs
 			const fixedInput =
@@ -216,11 +215,15 @@ export class FetchMocker {
 				}
 			}
 			
+			signal?.throwIfAborted();
+
 			const response = await this.#internalFetch(request, init?.body);
 
 			if (useCors && this.#baseUrl) {
 				assertCorsResponse(response, this.#baseUrl.origin);
 			}
+			
+			signal?.throwIfAborted();
 
 			return response;
 		};
