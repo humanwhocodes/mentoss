@@ -74,7 +74,7 @@ Partial matches:
   ❌ Headers do not match. Expected authorization=Bearer ABC but received authorization=Bearer XYZ.`.trim();
 
 const PREFLIGHT_FAILED = `
-Request to https://api.example.com/hello from https://api.example.org is blocked by CORS policy:  Response to preflight request doesn't pass access control check: It does not have HTTP ok status.
+Access to fetch at 'https://api.example.com/hello' from origin 'https://api.example.org' has been blocked by CORS policy: Response to preflight request doesn't pass access control check: It does not have HTTP ok status.
 `.trim();
 
 //-----------------------------------------------------------------------------
@@ -455,7 +455,7 @@ describe("FetchMocker", () => {
 				server.get("/hello", 200);
 
 				await assert.rejects(fetchMocker.fetch(url), {
-					name: "Error",
+					name: "CorsError",
 					message: `Access to fetch at '${url.href}' from origin '${origin}' has been blocked by CORS policy: Response to preflight request doesn't pass access control check: No 'Access-Control-Allow-Origin' header is present on the requested resource.`,
 				});
 			});
@@ -472,13 +472,12 @@ describe("FetchMocker", () => {
 				server.get("/hello", {
 					status: 200,
 					headers: {
-						"Access-Control-Allow-Origin":
-							"https://api.example.com",
+						"Access-Control-Allow-Origin": "https://api.example.com",
 					},
 				});
 
 				await assert.rejects(fetchMocker.fetch(url), {
-					name: "Error",
+					name: "CorsError",
 					message: `Access to fetch at '${url.href}' from origin '${origin}' has been blocked by CORS policy: The 'Access-Control-Allow-Origin' header has a value 'https://api.example.com' that is not equal to the supplied origin.`,
 				});
 			});
@@ -891,7 +890,7 @@ describe("FetchMocker", () => {
 					await assert.rejects(
 						fetchMocker.fetch(url, { headers: { Custom: "Foo" } }),
 						{
-							name: "Error",
+							name: "CorsError",
 							message: `Access to fetch at '${url.href}' from origin '${origin}' has been blocked by CORS policy: Response to preflight request doesn't pass access control check: No 'Access-Control-Allow-Origin' header is present on the requested resource.`,
 						},
 					);
@@ -919,7 +918,7 @@ describe("FetchMocker", () => {
 					await assert.rejects(
 						fetchMocker.fetch(url, { headers: { Custom: "Foo" } }),
 						{
-							name: "Error",
+							name: "CorsError",
 							message: `Access to fetch at '${url.href}' from origin '${origin}' has been blocked by CORS policy: The 'Access-Control-Allow-Origin' header has a value 'https://api.example.com' that is not equal to the supplied origin.`,
 						},
 					);
