@@ -54,7 +54,7 @@ jobs:
               if: ${{ steps.release.outputs.release_created }}
 
             # Tweets out release announcement
-            - run: 'node dist/esm/bin.js -t -b -m "${{ github.event.repository.full_name }} v${{ steps.release.outputs.major }}.${{ steps.release.outputs.minor }}.${{ steps.release.outputs.patch }} has been released!\n\n${{ github.event.repository.html_url }}/releases/tag/${{ steps.release.outputs.tag_name }}"'
+            - run: 'npx @humanwhocodes/crosspost -t -b -m "Mentoss v${{ steps.release.outputs.major }}.${{ steps.release.outputs.minor }}.${{ steps.release.outputs.patch }} has been released!\n\n${{ github.event.repository.html_url }}/releases/tag/${{ steps.release.outputs.tag_name }}"'
               if: ${{ steps.release.outputs.release_created }}
               env:
                   TWITTER_API_CONSUMER_KEY: ${{ secrets.TWITTER_CONSUMER_KEY }}
