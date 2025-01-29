@@ -246,6 +246,22 @@ describe("MockServer", () => {
 			const response = await server.receive(request);
 			assert.strictEqual(response.url, `${BASE_URL}/test?foo=bar`);
 		});
+		
+		it("should delay the response by at least 500ms", async () => {
+			server.get("/test", { status: 200, body: "OK", delay: 500 });
+
+			const request = createRequest({
+				method: "GET",
+				url: `${BASE_URL}/test?foo=bar`,
+			});
+
+			const startTime = Date.now();
+			const response = await server.receive(request);
+			const elapsed = Date.now() - startTime;
+			
+			assert.ok(elapsed > 500, "Response was not delayed at least one second");
+			assert.strictEqual(response.url, `${BASE_URL}/test?foo=bar`);
+		});
 	});
 
 	describe("traceReceive()", () => {
