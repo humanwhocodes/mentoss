@@ -284,6 +284,49 @@ export class RequestMatcher {
 				}
 
 				messages.push("✅ Body matches.");
+			} else if (this.#body instanceof ArrayBuffer) {
+				
+				if (!(request.body instanceof ArrayBuffer)) {
+					return {
+						matches: false,
+						messages: [
+							...messages,
+							`❌ Body does not match. Expected ArrayBuffer but received ${request.body.constructor.name}.`,
+						],
+					};
+				}
+				
+				// compare array buffers
+				if (
+					request.body.byteLength !== this.#body.byteLength
+				) {
+					return {
+						matches: false,
+						messages: [
+							...messages,
+							`❌ Body does not match. Expected array buffer byte length ${this.#body.byteLength} but received ${request.body.byteLength}`,
+						],
+					};
+				}
+				
+				// convert into uint8arrays to compare
+				const expectedBody = new Uint8Array(this.#body);
+				const actualBody = new Uint8Array(request.body);
+				
+				for (let i = 0; i < expectedBody.length; i++) {
+					if (expectedBody[i] !== actualBody[i]) {
+						return {
+							matches: false,
+							messages: [
+								...messages,
+								`❌ Body does not match. Expected byte ${i} to be ${expectedBody[i]} but received ${actualBody[i]}.`,
+							],
+						};
+					}
+				}
+
+				messages.push("✅ Body matches.");
+				
 			} else {
 				// body must be an object here to run a check
 				if (typeof request.body !== "object") {
@@ -295,7 +338,7 @@ export class RequestMatcher {
 						],
 					};
 				}
-
+console.log('hi')
 				// body is an object so proceed
 				if (!deepCompare(request.body, this.#body)) {
 					return {
