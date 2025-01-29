@@ -259,7 +259,7 @@ describe("MockServer", () => {
 			const response = await server.receive(request);
 			const elapsed = Date.now() - startTime;
 			
-			assert.ok(elapsed > 500, "Response was not delayed at least one second");
+			assert.ok(elapsed > 500, "Response was not delayed at least 500ms");
 			assert.strictEqual(response.url, `${BASE_URL}/test?foo=bar`);
 		});
 	});
