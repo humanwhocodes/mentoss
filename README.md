@@ -90,8 +90,8 @@ mocker.clearAll();
 
 To work on Mentoss, you'll need:
 
-* [Git](https://git-scm.com/)
-* [Node.js](https://nodejs.org)
+- [Git](https://git-scm.com/)
+- [Node.js](https://nodejs.org)
 
 Make sure both are installed by visiting the links and following the instructions to install.
 

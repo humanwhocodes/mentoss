@@ -62,11 +62,7 @@ export const safeResponseHeaders = new Set([
 ]);
 
 // the headers that are forbidden to be read from responses
-export const forbiddenResponseHeaders = new Set([
-	"set-cookie",
-	"set-cookie2",
-]);
-
+export const forbiddenResponseHeaders = new Set(["set-cookie", "set-cookie2"]);
 
 // the content types allowed for simple requests
 const simpleRequestContentTypes = new Set([
@@ -77,7 +73,6 @@ const simpleRequestContentTypes = new Set([
 
 // the methods that are forbidden to be used with CORS
 const forbiddenMethods = new Set(["CONNECT", "TRACE", "TRACK"]);
-
 
 export const CORS_ALLOW_ORIGIN = "Access-Control-Allow-Origin";
 export const CORS_ALLOW_CREDENTIALS = "Access-Control-Allow-Credentials";
@@ -101,8 +96,10 @@ export const CORS_ORIGIN = "Origin";
  * @see https://fetch.spec.whatwg.org/#forbidden-method
  */
 function isForbiddenMethodOverride(header, value) {
-	return methodOverrideRequestHeaders.has(header)
-		&& forbiddenMethods.has(value.toUpperCase());
+	return (
+		methodOverrideRequestHeaders.has(header) &&
+		forbiddenMethods.has(value.toUpperCase())
+	);
 }
 
 /**
@@ -112,11 +109,14 @@ function isForbiddenMethodOverride(header, value) {
  * @returns {boolean} `true` if the header is forbidden, `false` otherwise.
  * @see https://fetch.spec.whatwg.org/#forbidden-header-name
  */
-function isForbiddenRequestHeader(header, value) { // eslint-disable-line no-unused-vars
-	return forbiddenRequestHeaders.has(header)
-		|| header.startsWith("proxy-")
-		|| header.startsWith("sec-")
-		|| isForbiddenMethodOverride(header, value);
+function isForbiddenRequestHeader(header, value) {
+	// eslint-disable-line no-unused-vars
+	return (
+		forbiddenRequestHeaders.has(header) ||
+		header.startsWith("proxy-") ||
+		header.startsWith("sec-") ||
+		isForbiddenMethodOverride(header, value)
+	);
 }
 
 /**
@@ -162,8 +162,6 @@ function isSimpleRangeHeader(range) {
 	return firstIsNumber && secondIsNumber;
 }
 
-
-
 //-----------------------------------------------------------------------------
 // Exports
 //-----------------------------------------------------------------------------
@@ -172,13 +170,12 @@ function isSimpleRangeHeader(range) {
  * Represents an error that occurs when a CORS request is blocked.
  */
 export class CorsError extends Error {
-	
 	/**
 	 * The name of the error.
 	 * @type {string}
 	 */
 	name = "CorsError";
-	
+
 	/**
 	 * Creates a new instance.
 	 * @param {string} requestUrl The URL of the request.
@@ -186,7 +183,9 @@ export class CorsError extends Error {
 	 * @param {string} message The error message.
 	 */
 	constructor(requestUrl, origin, message) {
-		super(`Access to fetch at '${requestUrl}' from origin '${origin}' has been blocked by CORS policy: ${message}`);
+		super(
+			`Access to fetch at '${requestUrl}' from origin '${origin}' has been blocked by CORS policy: ${message}`,
+		);
 	}
 }
 
@@ -204,7 +203,7 @@ export function assertCorsResponse(response, origin) {
 		throw new CorsError(
 			response.url,
 			origin,
-			"Response to preflight request doesn't pass access control check: No 'Access-Control-Allow-Origin' header is present on the requested resource."
+			"Response to preflight request doesn't pass access control check: No 'Access-Control-Allow-Origin' header is present on the requested resource.",
 		);
 	}
 
@@ -225,19 +224,17 @@ export function assertCorsResponse(response, origin) {
  * @returns {Response} The processed response.
  */
 export function processCorsResponse(response, origin) {
-	
 	// first check that the response is allowed
 	assertCorsResponse(response, origin);
-	
+
 	// check if the Access-Control-Expose-Headers header is present
 	const exposedHeaders = response.headers.get(CORS_EXPOSE_HEADERS);
 	const allowedHeaders = exposedHeaders
 		? new Set(exposedHeaders.toLowerCase().split(", "))
 		: new Set();
-	
+
 	// next filter out any headers that aren't allowed
 	for (const key of response.headers.keys()) {
-		
 		// first check if the header is always allowed
 		if (safeResponseHeaders.has(key)) {
 			continue;
@@ -248,13 +245,13 @@ export function processCorsResponse(response, origin) {
 			response.headers.delete(key);
 			continue;
 		}
-		
+
 		// finally check if the header is allowed by the server
 		if (!allowedHeaders.has(key)) {
 			response.headers.delete(key);
 		}
 	}
-	
+
 	return response;
 }
 
@@ -359,7 +356,7 @@ export class CorsPreflightData {
 		this.allowCredentials = headers.get(CORS_ALLOW_CREDENTIALS) === "true";
 
 		this.maxAge = Number(headers.get(CORS_MAX_AGE)) || Infinity;
-		
+
 		// Note: Access-Control-Expose-Headers is not honored on preflight requests
 	}
 
@@ -371,9 +368,8 @@ export class CorsPreflightData {
 	 * @throws {Error} When the method is not allowed.
 	 */
 	#validateMethod(request, origin) {
-		
 		const method = request.method.toUpperCase();
-		
+
 		if (
 			!this.allowAllMethods &&
 			!safeMethods.has(method) &&
@@ -395,9 +391,8 @@ export class CorsPreflightData {
 	 * @throws {Error} When the headers are not allowed.
 	 */
 	#validateHeaders(request, origin) {
-		
 		const { headers } = request;
-		
+
 		for (const header of headers.keys()) {
 			// simple headers are always allowed
 			if (safeRequestHeaders.has(header)) {

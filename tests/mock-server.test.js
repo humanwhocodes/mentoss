@@ -19,7 +19,6 @@ import { verbs } from "../src/http.js";
 
 const BASE_URL = "https://example.com";
 
-
 //-----------------------------------------------------------------------------
 // Helpers
 //-----------------------------------------------------------------------------
@@ -62,11 +61,11 @@ async function getResponseBody(response) {
 	if (contentType?.includes("application/json")) {
 		return response.json();
 	}
-	
+
 	if (contentType?.includes("text")) {
 		return response.text();
 	}
-	
+
 	return response.arrayBuffer();
 }
 
@@ -248,7 +247,7 @@ describe("MockServer", () => {
 			const response = await server.receive(request);
 			assert.strictEqual(response.url, `${BASE_URL}/test?foo=bar`);
 		});
-		
+
 		it("should delay the response by at least 500ms", async () => {
 			server.get("/test", { status: 200, body: "OK", delay: 500 });
 
@@ -260,8 +259,11 @@ describe("MockServer", () => {
 			const startTime = Date.now();
 			const response = await server.receive(request);
 			const elapsed = Date.now() - startTime;
-			
-			assert.ok(elapsed >= 500, `Response was delayed ${elapsed}ms, expected at least 500ms.`);
+
+			assert.ok(
+				elapsed >= 500,
+				`Response was delayed ${elapsed}ms, expected at least 500ms.`,
+			);
 			assert.strictEqual(response.url, `${BASE_URL}/test?foo=bar`);
 		});
 	});
@@ -891,11 +893,10 @@ describe("MockServer", () => {
 			const response = await server.receive(request);
 			assert.strictEqual(response, undefined);
 		});
-		
+
 		it("should match the request when the body is an ArrayBuffer", async () => {
-			
 			const buffer = new TextEncoder().encode("Created").buffer;
-			
+
 			server.post(
 				{ url: "/submit", body: buffer },
 				{ status: 201, body: "Created" },
@@ -912,10 +913,12 @@ describe("MockServer", () => {
 			assert.strictEqual(response.statusText, "Created");
 			assert.strictEqual(await getResponseBody(response), "Created");
 		});
-		
+
 		it("should not match the request when a different ArrayBuffer is used", async () => {
 			const buffer = new TextEncoder().encode("Created").buffer;
-			const differentBuffer = new TextEncoder().encode("Different").buffer;
+			const differentBuffer = new TextEncoder().encode(
+				"Different",
+			).buffer;
 
 			server.post(
 				{ url: "/submit", body: buffer },
@@ -926,7 +929,7 @@ describe("MockServer", () => {
 				method: "POST",
 				url: `${BASE_URL}/submit`,
 				headers: {
-					"content-type": "application/octet-stream"
+					"content-type": "application/octet-stream",
 				},
 				body: differentBuffer,
 			});
@@ -1018,103 +1021,104 @@ describe("MockServer", () => {
 
 	describe("Input validation", () => {
 		it("should throw an error if method is missing", () => {
-			assert.throws(
-				() => {
-					server.route({ url: "/test" }, { status: 200, body: "OK" });
-				},
-				/Request pattern must include a method/u,
-			);
+			assert.throws(() => {
+				server.route({ url: "/test" }, { status: 200, body: "OK" });
+			}, /Request pattern must include a method/u);
 		});
 
 		it("should throw an error if url is empty", () => {
-			assert.throws(
-				() => {
-					server.route({ method: "GET", url: "" }, { status: 200, body: "OK" });
-				},
-				/Request pattern must include a URL/u,
-			);
+			assert.throws(() => {
+				server.route(
+					{ method: "GET", url: "" },
+					{ status: 200, body: "OK" },
+				);
+			}, /Request pattern must include a URL/u);
 		});
 
 		it("should throw an error if method is empty", () => {
-			assert.throws(
-				() => {
-					server.route({ method: "", url: BASE_URL }, { status: 200, body: "OK" });
-				},
-				/Request pattern must include a method/u,
-			);
+			assert.throws(() => {
+				server.route(
+					{ method: "", url: BASE_URL },
+					{ status: 200, body: "OK" },
+				);
+			}, /Request pattern must include a method/u);
 		});
 
 		it("should throw an error if method is not a string", () => {
-			assert.throws(
-				() => {
-					server.route({ method: 303, url: BASE_URL }, { status: 200, body: "OK" });
-				},
-				/Request pattern method must be a string/u,
-			);
+			assert.throws(() => {
+				server.route(
+					{ method: 303, url: BASE_URL },
+					{ status: 200, body: "OK" },
+				);
+			}, /Request pattern method must be a string/u);
 		});
 
 		it("should throw an error if URL is not a string", () => {
-			assert.throws(
-				() => {
-					server.route({ method: "GET", url: 303 }, { status: 200, body: "OK" });
-				},
-				/Request pattern URL must be a string/u,
-			);
+			assert.throws(() => {
+				server.route(
+					{ method: "GET", url: 303 },
+					{ status: 200, body: "OK" },
+				);
+			}, /Request pattern URL must be a string/u);
 		});
 
 		it("should throw an error if headers is not an object", () => {
-			assert.throws(
-				() => {
-					server.route({ method: "GET", url: BASE_URL, headers: 808 }, { status: 200, body: "OK" });
-				},
-				/Request pattern headers must be an object/u,
-			);
+			assert.throws(() => {
+				server.route(
+					{ method: "GET", url: BASE_URL, headers: 808 },
+					{ status: 200, body: "OK" },
+				);
+			}, /Request pattern headers must be an object/u);
 		});
 
 		it("should throw an error if body is not a string, object, or FormData", () => {
-			assert.throws(
-				() => {
-					server.route({ method: "GET", url: BASE_URL, body: 303 }, { status: 200, body: "OK" });
-				},
-				/Request pattern body must be a string, object, or FormData/u,
-			);
+			assert.throws(() => {
+				server.route(
+					{ method: "GET", url: BASE_URL, body: 303 },
+					{ status: 200, body: "OK" },
+				);
+			}, /Request pattern body must be a string, object, or FormData/u);
 		});
-		
+
 		verbs.forEach(verb => {
-			
 			const method = verb.toLowerCase();
-			
+
 			it(`should throw an error when ${method}() is called with a request pattern method`, () => {
 				assert.throws(() => {
-					server[method]({ method: "POST", url: "/test" }, { status: 200, body: "OK" }, "GET");
+					server[method](
+						{ method: "POST", url: "/test" },
+						{ status: 200, body: "OK" },
+						"GET",
+					);
 				}, /Request pattern must not include a method/u);
 			});
-			
+
 			it(`should throw an error when ${method}() is called with a response pattern without a status`, () => {
 				assert.throws(() => {
 					server[method]({ url: "/test" }, {});
 				}, /Response pattern must include a status/u);
 			});
-			
+
 			it(`should throw an error when ${method}() is called with a response pattern with an invalid status`, () => {
 				assert.throws(() => {
 					server[method]({ url: "/test" }, { status: "foo" });
 				}, /Response pattern status must be a number/u);
 			});
-			
+
 			it(`should throw an error when ${method}() is called with a response pattern with a boolean body`, () => {
 				assert.throws(() => {
-					server[method]({ url: "/test" }, { status: 200, body: true });
+					server[method](
+						{ url: "/test" },
+						{ status: 200, body: true },
+					);
 				}, /Response pattern body must be a string, object, ArrayBuffer/u);
 			});
-			
+
 			it(`should throw an error when ${method}() is called with a response pattern with an invalid numeric status`, () => {
 				assert.throws(() => {
 					server[method]({ url: "/test" }, { status: 6000 });
 				}, /Response pattern status 6000 is not a valid HTTP status code/u);
 			});
-			
 		});
-		
 	});
 });

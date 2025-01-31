@@ -91,29 +91,33 @@ function assertNoMethod(request) {
  * @throws {TypeError} If the response pattern is invalid.
  */
 function assertValidResponsePattern(responsePattern) {
-	
 	if (!("status" in responsePattern)) {
 		throw new TypeError("Response pattern must include a status.");
 	}
-	
+
 	if (responsePattern.status && typeof responsePattern.status !== "number") {
 		throw new TypeError("Response pattern status must be a number.");
 	}
-	
+
 	if (responsePattern.status && !statusTexts.has(responsePattern.status)) {
-		throw new TypeError(`Response pattern status ${responsePattern.status} is not a valid HTTP status code.`);
+		throw new TypeError(
+			`Response pattern status ${responsePattern.status} is not a valid HTTP status code.`,
+		);
 	}
 
-	if (responsePattern.headers && typeof responsePattern.headers !== "object") {
+	if (
+		responsePattern.headers &&
+		typeof responsePattern.headers !== "object"
+	) {
 		throw new TypeError("Response pattern headers must be an object.");
 	}
-	
+
 	if (responsePattern.body) {
 		const isString = typeof responsePattern.body === "string";
 		const isObject = typeof responsePattern.body === "object";
 		const isFormData = responsePattern.body instanceof FormData;
 		const isArrayBuffer = responsePattern.body instanceof ArrayBuffer;
-		
+
 		if (!isString && !isFormData && !isArrayBuffer && !isObject) {
 			throw new TypeError(
 				"Response pattern body must be a string, object, ArrayBuffer, or FormData.",
@@ -232,14 +236,16 @@ export class Route {
 			},
 		});
 	}
-	
+
 	/**
 	 * Creates a delay as specified by the route's response pattern.
 	 * @returns {Promise<void>} A promise that resolves when the delay is over.
 	 */
 	async delay() {
 		if (this.#response.delay) {
-			await new Promise(resolve => setTimeout(resolve, this.#response.delay));
+			await new Promise(resolve =>
+				setTimeout(resolve, this.#response.delay),
+			);
 		}
 	}
 
@@ -298,16 +304,16 @@ export class MockServer {
 			typeof request === "string" ? { url: request } : request;
 		const routeResponse =
 			typeof response === "number" ? { status: response } : response;
-			
+
 		const requestPattern = /** @type {RequestPattern} */ ({
 			method,
 			...routeRequest,
 		});
 
 		assertValidRequestPattern(requestPattern);
-		
+
 		const responsePattern = /** @type {ResponsePattern} */ (routeResponse);
-		
+
 		assertValidResponsePattern(responsePattern);
 
 		this.#unmatchedRoutes.push(
@@ -453,7 +459,7 @@ export class MockServer {
 				 */
 				const response = route.createResponse(PreferredResponse);
 				Object.defineProperty(response, "url", { value: request.url });
-				
+
 				await route.delay();
 
 				return { response, traces };
