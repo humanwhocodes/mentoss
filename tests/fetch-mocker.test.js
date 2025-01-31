@@ -472,7 +472,8 @@ describe("FetchMocker", () => {
 				server.get("/hello", {
 					status: 200,
 					headers: {
-						"Access-Control-Allow-Origin": "https://api.example.com",
+						"Access-Control-Allow-Origin":
+							"https://api.example.com",
 					},
 				});
 
@@ -950,31 +951,75 @@ describe("FetchMocker", () => {
 					assert.strictEqual(response.status, 200);
 				});
 			});
+		});
 
-			describe("Access-Control-Expose-Headers", () => {
-				it("should throw an error when Access-Control-Exposes-Headers is present", async () => {
-					const server = new MockServer(BASE_URL);
-					const fetchMocker = new FetchMocker({
-						servers: [server],
-						baseUrl: ALT_BASE_URL,
-					});
-					const url = new URL("/hello", BASE_URL);
-					const origin = new URL(ALT_BASE_URL).origin;
+		describe("Access-Control-Expose-Headers", () => {
+			let server, fetchMocker, url, origin;
 
-					server.options("/hello", {
-						status: 200,
-						headers: {
-							"Access-Control-Allow-Origin": origin,
-							"Access-Control-Allow-Headers": "Custom",
-							"Access-Control-Expose-Headers": "Custom",
-						},
-					});
-
-					await assert.rejects(
-						fetchMocker.fetch(url, { headers: { Custom: "Foo" } }),
-						/Access-Control-Expose-Headers is not yet supported/i,
-					);
+			beforeEach(() => {
+				server = new MockServer(BASE_URL);
+				fetchMocker = new FetchMocker({
+					servers: [server],
+					baseUrl: ALT_BASE_URL,
 				});
+				url = new URL("/hello", BASE_URL);
+				origin = new URL(ALT_BASE_URL).origin;
+			});
+
+			it("should not allow the response to contain X-Mentoss header when not exposed with preflight", async () => {
+				server.get("/hello", {
+					status: 200,
+					headers: {
+						"Access-Control-Allow-Origin": origin,
+						"Access-Control-Expose-Headers": "X-Mentoss",
+						"X-Mentoss": "Bar",
+					},
+				});
+
+				server.options("/hello", {
+					status: 200,
+					headers: {
+						"Access-Control-Allow-Origin": origin,
+						"Access-Control-Allow-Headers": "X-Mentoss",
+					},
+				});
+
+				const response = await fetchMocker.fetch(url, {
+					headers: {
+						"X-Mentoss": "Foo",
+					},
+				});
+
+				assert.strictEqual(response.headers.get("X-Mentoss"), "Bar");
+			});
+
+			it("should not allow the response to contain Set-Cookie header when not exposed", async () => {
+				server.get("/hello", {
+					status: 200,
+					headers: {
+						"Access-Control-Allow-Origin": origin,
+						"Set-Cookie": "Foo",
+					},
+				});
+
+				const response = await fetchMocker.fetch(url);
+
+				assert.strictEqual(response.headers.get("Set-Cookie"), null);
+			});
+
+			it("should not allow the response to contain Set-Cookie even when exposed", async () => {
+				server.get("/hello", {
+					status: 200,
+					headers: {
+						"Access-Control-Allow-Origin": origin,
+						"Access-Control-Expose-Headers": "Set-Cookie",
+						"Set-Cookie": "Foo",
+					},
+				});
+
+				const response = await fetchMocker.fetch(url);
+
+				assert.strictEqual(response.headers.get("Set-Cookie"), null);
 			});
 		});
 	});
@@ -1017,9 +1062,8 @@ describe("FetchMocker", () => {
 			}
 		});
 	});
-	
+
 	describe("Passing an AbortSignal", () => {
-		
 		it("should throw an abort error when passed an aborted signal", async () => {
 			const server = new MockServer(BASE_URL);
 			const fetchMocker = new FetchMocker({
@@ -1038,7 +1082,7 @@ describe("FetchMocker", () => {
 				/Foo/,
 			);
 		});
-		
+
 		it("should throw an abort error when the request is aborted", async () => {
 			const server = new MockServer(BASE_URL);
 			const fetchMocker = new FetchMocker({
@@ -1048,13 +1092,13 @@ describe("FetchMocker", () => {
 			server.get("/hello", {
 				status: 200,
 				body: "Hello world!",
-				delay: 100
+				delay: 100,
 			});
 
 			const controller = new AbortController();
 
 			queueMicrotask(() => controller.abort());
-			
+
 			await assert.rejects(
 				fetchMocker.fetch(BASE_URL + "/hello", {
 					signal: controller.signal,
@@ -1062,6 +1106,5 @@ describe("FetchMocker", () => {
 				/aborted/,
 			);
 		});
-		
 	});
 });

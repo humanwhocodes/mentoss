@@ -221,11 +221,5 @@ describe("My API", () => {
 </Aside>
 
 <Aside type="caution">
-While CORS support is mostly complete, there are two features that are not yet supported:
-
--   Credentialed requests (requests that include cookies or HTTP authentication information)
--   The `Access-Control-Expose-Headers` header
-
-Mentoss throws errors when either of these features is used to ensure it's clear that a test is not behaving as expected.
-
+While CORS support is mostly complete, credentialed requests (requests that include cookies or HTTP authentication information) are not yet supported. Mentoss throws an error if you try to use a credentialed request.
 </Aside>

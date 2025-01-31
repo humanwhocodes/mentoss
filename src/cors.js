@@ -8,10 +8,10 @@
 //-----------------------------------------------------------------------------
 
 // the methods allowed for simple requests
-export const corsSafeMethods = new Set(["GET", "HEAD", "POST"]);
+export const safeMethods = new Set(["GET", "HEAD", "POST"]);
 
 // the headers allowed for simple requests
-export const corsSafeHeaders = new Set([
+export const safeRequestHeaders = new Set([
 	"accept",
 	"accept-language",
 	"content-language",
@@ -19,12 +19,60 @@ export const corsSafeHeaders = new Set([
 	"range",
 ]);
 
+// the headers that are forbidden to be sent with requests
+export const forbiddenRequestHeaders = new Set([
+	"accept-charset",
+	"accept-encoding",
+	"access-control-request-headers",
+	"access-control-request-method",
+	"connection",
+	"content-length",
+	"cookie",
+	"cookie2",
+	"date",
+	"dnt",
+	"expect",
+	"host",
+	"keep-alive",
+	"origin",
+	"referer",
+	"te",
+	"trailer",
+	"transfer-encoding",
+	"upgrade",
+	"user-agent",
+	"via",
+]);
+
+// the headers that can be used to override the method
+const methodOverrideRequestHeaders = new Set([
+	"x-http-method",
+	"x-http-method-override",
+	"x-method-override",
+]);
+
+// the headers that are always allowed to be read from responses
+export const safeResponseHeaders = new Set([
+	"cache-control",
+	"content-language",
+	"content-type",
+	"expires",
+	"last-modified",
+	"pragma",
+]);
+
+// the headers that are forbidden to be read from responses
+export const forbiddenResponseHeaders = new Set(["set-cookie", "set-cookie2"]);
+
 // the content types allowed for simple requests
-const corsSimpleContentTypes = new Set([
+const simpleRequestContentTypes = new Set([
 	"application/x-www-form-urlencoded",
 	"multipart/form-data",
 	"text/plain",
 ]);
+
+// the methods that are forbidden to be used with CORS
+const forbiddenMethods = new Set(["CONNECT", "TRACE", "TRACK"]);
 
 export const CORS_ALLOW_ORIGIN = "Access-Control-Allow-Origin";
 export const CORS_ALLOW_CREDENTIALS = "Access-Control-Allow-Credentials";
@@ -39,6 +87,37 @@ export const CORS_ORIGIN = "Origin";
 //-----------------------------------------------------------------------------
 // Helpers
 //-----------------------------------------------------------------------------
+
+/**
+ * Checks if a method is forbidden for CORS.
+ * @param {string} header The header to check.
+ * @param {string} value The value to check.
+ * @returns {boolean} `true` if the method is forbidden, `false` otherwise.
+ * @see https://fetch.spec.whatwg.org/#forbidden-method
+ */
+function isForbiddenMethodOverride(header, value) {
+	return (
+		methodOverrideRequestHeaders.has(header) &&
+		forbiddenMethods.has(value.toUpperCase())
+	);
+}
+
+/**
+ * Checks if a request header is forbidden for CORS.
+ * @param {string} header The header to check.
+ * @param {string} value The value to check.
+ * @returns {boolean} `true` if the header is forbidden, `false` otherwise.
+ * @see https://fetch.spec.whatwg.org/#forbidden-header-name
+ */
+function isForbiddenRequestHeader(header, value) {
+	// eslint-disable-line no-unused-vars
+	return (
+		forbiddenRequestHeaders.has(header) ||
+		header.startsWith("proxy-") ||
+		header.startsWith("sec-") ||
+		isForbiddenMethodOverride(header, value)
+	);
+}
 
 /**
  * Checks if a Range header value is a simple range according to the Fetch API spec.
@@ -91,13 +170,12 @@ function isSimpleRangeHeader(range) {
  * Represents an error that occurs when a CORS request is blocked.
  */
 export class CorsError extends Error {
-	
 	/**
 	 * The name of the error.
 	 * @type {string}
 	 */
 	name = "CorsError";
-	
+
 	/**
 	 * Creates a new instance.
 	 * @param {string} requestUrl The URL of the request.
@@ -105,7 +183,9 @@ export class CorsError extends Error {
 	 * @param {string} message The error message.
 	 */
 	constructor(requestUrl, origin, message) {
-		super(`Access to fetch at '${requestUrl}' from origin '${origin}' has been blocked by CORS policy: ${message}`);
+		super(
+			`Access to fetch at '${requestUrl}' from origin '${origin}' has been blocked by CORS policy: ${message}`,
+		);
 	}
 }
 
@@ -123,7 +203,7 @@ export function assertCorsResponse(response, origin) {
 		throw new CorsError(
 			response.url,
 			origin,
-			"Response to preflight request doesn't pass access control check: No 'Access-Control-Allow-Origin' header is present on the requested resource."
+			"Response to preflight request doesn't pass access control check: No 'Access-Control-Allow-Origin' header is present on the requested resource.",
 		);
 	}
 
@@ -134,12 +214,45 @@ export function assertCorsResponse(response, origin) {
 			`The 'Access-Control-Allow-Origin' header has a value '${originHeader}' that is not equal to the supplied origin.`,
 		);
 	}
+}
 
+/**
+ * Processes a CORS response to ensure it's valid and doesn't contain
+ * any forbidden headers.
+ * @param {Response} response The response to process.
+ * @param {string} origin The origin of the request.
+ * @returns {Response} The processed response.
+ */
+export function processCorsResponse(response, origin) {
+	// first check that the response is allowed
+	assertCorsResponse(response, origin);
+
+	// check if the Access-Control-Expose-Headers header is present
 	const exposedHeaders = response.headers.get(CORS_EXPOSE_HEADERS);
+	const allowedHeaders = exposedHeaders
+		? new Set(exposedHeaders.toLowerCase().split(", "))
+		: new Set();
 
-	if (exposedHeaders) {
-		throw new Error("Access-Control-Expose-Headers is not yet supported.");
+	// next filter out any headers that aren't allowed
+	for (const key of response.headers.keys()) {
+		// first check if the header is always allowed
+		if (safeResponseHeaders.has(key)) {
+			continue;
+		}
+
+		// next check if the header is never allowed
+		if (forbiddenResponseHeaders.has(key)) {
+			response.headers.delete(key);
+			continue;
+		}
+
+		// finally check if the header is allowed by the server
+		if (!allowedHeaders.has(key)) {
+			response.headers.delete(key);
+		}
 	}
+
+	return response;
 }
 
 /**
@@ -149,7 +262,7 @@ export function assertCorsResponse(response, origin) {
  */
 export function isCorsSimpleRequest(request) {
 	// if it's not a simple method then it's not a simple request
-	if (!corsSafeMethods.has(request.method)) {
+	if (!safeMethods.has(request.method)) {
 		return false;
 	}
 
@@ -157,7 +270,7 @@ export function isCorsSimpleRequest(request) {
 	const headers = request.headers;
 
 	for (const header of headers.keys()) {
-		if (!corsSafeHeaders.has(header)) {
+		if (!safeRequestHeaders.has(header)) {
 			return false;
 		}
 	}
@@ -165,7 +278,7 @@ export function isCorsSimpleRequest(request) {
 	// check the content type
 	const contentType = headers.get("content-type");
 
-	if (contentType && !corsSimpleContentTypes.has(contentType)) {
+	if (contentType && !simpleRequestContentTypes.has(contentType)) {
 		return false;
 	}
 
@@ -214,12 +327,6 @@ export class CorsPreflightData {
 	allowCredentials = false;
 
 	/**
-	 * The exposed headers for this URL.
-	 * @type {Set<string>}
-	 */
-	exposedHeaders = new Set();
-
-	/**
 	 * The maximum age for this URL.
 	 * @type {number}
 	 */
@@ -248,14 +355,9 @@ export class CorsPreflightData {
 
 		this.allowCredentials = headers.get(CORS_ALLOW_CREDENTIALS) === "true";
 
-		const exposeHeaders = headers.get(CORS_EXPOSE_HEADERS);
-		if (exposeHeaders) {
-			this.exposedHeaders = new Set(
-				exposeHeaders.toLowerCase().split(", "),
-			);
-		}
-
 		this.maxAge = Number(headers.get(CORS_MAX_AGE)) || Infinity;
+
+		// Note: Access-Control-Expose-Headers is not honored on preflight requests
 	}
 
 	/**
@@ -266,12 +368,11 @@ export class CorsPreflightData {
 	 * @throws {Error} When the method is not allowed.
 	 */
 	#validateMethod(request, origin) {
-		
 		const method = request.method.toUpperCase();
-		
+
 		if (
 			!this.allowAllMethods &&
-			!corsSafeMethods.has(method) &&
+			!safeMethods.has(method) &&
 			!this.allowedMethods.has(method)
 		) {
 			throw new CorsError(
@@ -290,12 +391,11 @@ export class CorsPreflightData {
 	 * @throws {Error} When the headers are not allowed.
 	 */
 	#validateHeaders(request, origin) {
-		
 		const { headers } = request;
-		
+
 		for (const header of headers.keys()) {
 			// simple headers are always allowed
-			if (corsSafeHeaders.has(header)) {
+			if (safeRequestHeaders.has(header)) {
 				continue;
 			}
 

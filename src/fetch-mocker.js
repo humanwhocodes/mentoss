@@ -12,10 +12,11 @@ import {
 	isCorsSimpleRequest,
 	CorsPreflightData,
 	assertCorsResponse,
+	processCorsResponse,
 	CORS_REQUEST_METHOD,
 	CORS_REQUEST_HEADERS,
 	CORS_ORIGIN,
-	CorsError
+	CorsError,
 } from "./cors.js";
 
 //-----------------------------------------------------------------------------
@@ -171,7 +172,6 @@ export class FetchMocker {
 
 		// create the function here to bind to `this`
 		this.fetch = async (input, init) => {
-			
 			// first check to see if the request has been aborted
 			const signal = init?.signal;
 			signal?.throwIfAborted();
@@ -180,7 +180,7 @@ export class FetchMocker {
 			// signal?.addEventListener("abort", () => {
 			// 	throw new Error("Fetch was aborted.");
 			// });
-			
+
 			// adjust any relative URLs
 			const fixedInput =
 				typeof input === "string" && this.#baseUrl
@@ -214,15 +214,15 @@ export class FetchMocker {
 					// if the preflight response is successful, then we can make the actual request
 				}
 			}
-			
+
 			signal?.throwIfAborted();
 
 			const response = await this.#internalFetch(request, init?.body);
 
 			if (useCors && this.#baseUrl) {
-				assertCorsResponse(response, this.#baseUrl.origin);
+				processCorsResponse(response, this.#baseUrl.origin);
 			}
-			
+
 			signal?.throwIfAborted();
 
 			return response;
@@ -319,7 +319,11 @@ export class FetchMocker {
 
 		// if the preflight response is successful, then we can make the actual request
 		if (!preflightResponse.ok) {
-			throw new CorsError(preflightRequest.url, this.#baseUrl.origin, "Response to preflight request doesn't pass access control check: It does not have HTTP ok status.");
+			throw new CorsError(
+				preflightRequest.url,
+				this.#baseUrl.origin,
+				"Response to preflight request doesn't pass access control check: It does not have HTTP ok status.",
+			);
 		}
 
 		assertCorsResponse(preflightResponse, this.#baseUrl.origin);
