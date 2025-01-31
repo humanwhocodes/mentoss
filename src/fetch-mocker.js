@@ -12,6 +12,7 @@ import {
 	isCorsSimpleRequest,
 	CorsPreflightData,
 	assertCorsResponse,
+	processCorsResponse,
 	CORS_REQUEST_METHOD,
 	CORS_REQUEST_HEADERS,
 	CORS_ORIGIN,
@@ -220,7 +221,7 @@ export class FetchMocker {
 			const response = await this.#internalFetch(request, init?.body);
 
 			if (useCors && this.#baseUrl) {
-				assertCorsResponse(response, this.#baseUrl.origin);
+				processCorsResponse(response, this.#baseUrl.origin);
 			}
 			
 			signal?.throwIfAborted();
