@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.3.0](https://github.com/humanwhocodes/mentoss/compare/mentoss-v0.2.0...mentoss-v0.3.0) (2025-01-31)
+
+
+### Features
+
+* Add ability to delay generating a response ([#28](https://github.com/humanwhocodes/mentoss/issues/28)) ([9a384b3](https://github.com/humanwhocodes/mentoss/commit/9a384b356e2f37fddc0407c4b05ec8a46bebb620))
+* Implement Access-Control-Expose-Headers ([#31](https://github.com/humanwhocodes/mentoss/issues/31)) ([60b5fd0](https://github.com/humanwhocodes/mentoss/commit/60b5fd0ea87d5ab603744628bb5564f34f4bf039))
+
+
+### Bug Fixes
+
+* Validate route inputs ([#29](https://github.com/humanwhocodes/mentoss/issues/29)) ([b314c31](https://github.com/humanwhocodes/mentoss/commit/b314c31f76bb91e17ee4b2354ba13708915af28f))
+
 ## [0.2.0](https://github.com/humanwhocodes/mentoss/compare/mentoss-v0.1.0...mentoss-v0.2.0) (2025-01-29)
 
 
