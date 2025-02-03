@@ -296,8 +296,8 @@ describe("MockServer", () => {
 			assert.strictEqual(response, undefined);
 			assert.strictEqual(traces.length, 1);
 			assert.strictEqual(
-				traces[0].route.toString(),
-				"[Route: GET https://example.com/test -> 200]",
+				traces[0].title,
+				"🚧 [Route: GET https://example.com/test -> 200]",
 			);
 			assert.deepStrictEqual(traces[0].messages, [
 				"✅ URL matches.",
@@ -317,8 +317,8 @@ describe("MockServer", () => {
 			assert.strictEqual(response, undefined);
 			assert.strictEqual(traces.length, 1);
 			assert.strictEqual(
-				traces[0].route.toString(),
-				"[Route: GET https://example.com/test -> 200]",
+				traces[0].title,
+				"🚧 [Route: GET https://example.com/test -> 200]",
 			);
 			assert.deepStrictEqual(traces[0].messages, [
 				"❌ URL does not match.",
@@ -346,8 +346,8 @@ describe("MockServer", () => {
 			assert.strictEqual(response, undefined);
 			assert.strictEqual(traces.length, 1);
 			assert.strictEqual(
-				traces[0].route.toString(),
-				"[Route: GET https://example.com/query -> 200]",
+				traces[0].title,
+				"🚧 [Route: GET https://example.com/query -> 200]",
 			);
 			assert.deepStrictEqual(traces[0].messages, [
 				"✅ URL matches.",
@@ -376,8 +376,8 @@ describe("MockServer", () => {
 			assert.strictEqual(response, undefined);
 			assert.strictEqual(traces.length, 1);
 			assert.strictEqual(
-				traces[0].route.toString(),
-				"[Route: GET https://example.com/users/:id -> 200]",
+				traces[0].title,
+				"🚧 [Route: GET https://example.com/users/:id -> 200]",
 			);
 			assert.deepStrictEqual(traces[0].messages, [
 				"✅ URL matches.",
@@ -405,8 +405,8 @@ describe("MockServer", () => {
 			assert.strictEqual(response, undefined);
 			assert.strictEqual(traces.length, 1);
 			assert.strictEqual(
-				traces[0].route.toString(),
-				"[Route: GET https://example.com/headers -> 200]",
+				traces[0].title,
+				"🚧 [Route: GET https://example.com/headers -> 200]",
 			);
 			assert.deepStrictEqual(traces[0].messages, [
 				"✅ URL matches.",
@@ -436,8 +436,8 @@ describe("MockServer", () => {
 			assert.strictEqual(response, undefined);
 			assert.strictEqual(traces.length, 1);
 			assert.strictEqual(
-				traces[0].route.toString(),
-				"[Route: POST https://example.com/submit -> 201]",
+				traces[0].title,
+				"🚧 [Route: POST https://example.com/submit -> 201]",
 			);
 			assert.deepStrictEqual(traces[0].messages, [
 				"✅ URL matches.",
@@ -460,16 +460,16 @@ describe("MockServer", () => {
 			assert.strictEqual(response, undefined);
 			assert.strictEqual(traces.length, 2);
 			assert.strictEqual(
-				traces[0].route.toString(),
-				"[Route: GET https://example.com/test -> 200]",
+				traces[0].title,
+				"🚧 [Route: GET https://example.com/test -> 200]",
 			);
 			assert.deepStrictEqual(traces[0].messages, [
 				"✅ URL matches.",
 				"❌ Method does not match. Expected GET but received OPTIONS.",
 			]);
 			assert.strictEqual(
-				traces[1].route.toString(),
-				"[Route: POST https://example.com/test -> 201]",
+				traces[1].title,
+				"🚧 [Route: POST https://example.com/test -> 201]",
 			);
 			assert.deepStrictEqual(traces[1].messages, [
 				"✅ URL matches.",
@@ -1004,7 +1004,7 @@ describe("MockServer", () => {
 
 			assert.throws(() => {
 				server.assertAllRoutesCalled();
-			}, /Expected all routes to be called/u);
+			}, /Not all routes were called. Uncalled routes:/u);
 		});
 
 		it("should not throw an error if all routes are matched", async () => {
@@ -1017,6 +1017,54 @@ describe("MockServer", () => {
 			await server.receive(request);
 			server.assertAllRoutesCalled();
 		});
+	});
+	
+	describe("uncalledRoutes", () => {
+		
+		it("should return all uncalled routes when one is called", async () => {
+			server.get("/test", { status: 200, body: "OK" });
+			server.get("/test2", { status: 200, body: "OK" });
+			server.post("/test2", { status: 200, body: "OK" });
+
+			const request = createRequest({
+				method: "GET",
+				url: `${BASE_URL}/test`,
+			});
+
+			await server.receive(request);
+			assert.deepStrictEqual(server.uncalledRoutes, [
+				"🚧 [Route: GET https://example.com/test2 -> 200]",
+				"🚧 [Route: POST https://example.com/test2 -> 200]",
+			]);
+		});
+		
+		it("should return no uncalled routes when all are called", async () => {
+			server.get("/test", { status: 200, body: "OK" });
+			server.get("/test2", { status: 200, body: "OK" });
+			server.post("/test2", { status: 200, body: "OK" });
+
+			const request = createRequest({
+				method: "GET",
+				url: `${BASE_URL}/test`,
+			});
+
+			await server.receive(request);
+			await server.receive(
+				createRequest({
+					method: "GET",
+					url: `${BASE_URL}/test2`,
+				}),
+			);
+			await server.receive(
+				createRequest({
+					method: "POST",
+					url: `${BASE_URL}/test2`,
+				}),
+			);
+
+			assert.deepStrictEqual(server.uncalledRoutes, []);
+		});
+		
 	});
 
 	describe("Input validation", () => {

@@ -402,6 +402,130 @@ describe("FetchMocker", () => {
 			assert.ok(!fetchMocker.allRoutesCalled());
 		});
 	});
+	
+	describe("uncalledRoutes", () => {
+		
+		it("should return all uncalled routes from all servers when none are called", async () => {
+			const server1 = new MockServer(BASE_URL);
+			const server2 = new MockServer(ALT_BASE_URL);
+			const fetchMocker = new FetchMocker({
+				servers: [server1, server2],
+			});
+
+			server1.get("/hello", {
+				status: 200,
+				body: "Hello world!",
+			});
+
+			server2.post("/goodbye", {
+				status: 200,
+				body: "Goodbye world!",
+			});
+
+			assert.deepStrictEqual(fetchMocker.uncalledRoutes, [
+				`🚧 [Route: GET ${BASE_URL}/hello -> 200]`,
+				`🚧 [Route: POST ${ALT_BASE_URL}/goodbye -> 200]`,
+			]);
+		});
+		
+		it("should return all uncalled routes from all servers when some are called", async () => {
+			const server1 = new MockServer(BASE_URL);
+			const server2 = new MockServer(ALT_BASE_URL);
+			const fetchMocker = new FetchMocker({
+				servers: [server1, server2],
+			});
+
+			server1.get("/hello", {
+				status: 200,
+				body: "Hello world!",
+			});
+
+			server2.post("/goodbye", {
+				status: 200,
+				body: "Goodbye world!",
+			});
+
+			await fetchMocker.fetch(BASE_URL + "/hello");
+			
+			assert.deepStrictEqual(fetchMocker.uncalledRoutes, [
+				`🚧 [Route: POST ${ALT_BASE_URL}/goodbye -> 200]`,
+			]);
+		});
+		
+		it("should return an empty array when all routes are called", async () => {
+			const server1 = new MockServer(BASE_URL);
+			const server2 = new MockServer(ALT_BASE_URL);
+			const fetchMocker = new FetchMocker({
+				servers: [server1, server2],
+			});
+
+			server1.get("/hello", {
+				status: 200,
+				body: "Hello world!",
+			});
+
+			server2.post("/goodbye", {
+				status: 200,
+				body: "Goodbye world!",
+			});
+
+			await fetchMocker.fetch(BASE_URL + "/hello");
+			await fetchMocker.fetch(ALT_BASE_URL + "/goodbye", { method: "POST" });
+			
+			assert.deepStrictEqual(fetchMocker.uncalledRoutes, []);
+		});
+		
+	});
+	
+	describe("assertAllRoutesCalled()", () => {
+		
+		it("should not throw when all routes on all servers have been called", async () => {
+			const server1 = new MockServer(BASE_URL);
+			const server2 = new MockServer(ALT_BASE_URL);
+			const fetchMocker = new FetchMocker({
+				servers: [server1, server2],
+			});
+
+			server1.get("/hello", {
+				status: 200,
+				body: "Hello world!",
+			});
+
+			server2.get("/goodbye", {
+				status: 200,
+				body: "Goodbye world!",
+			});
+
+			await fetchMocker.fetch(BASE_URL + "/hello");
+			await fetchMocker.fetch(ALT_BASE_URL + "/goodbye");
+			
+			fetchMocker.assertAllRoutesCalled();
+		});
+		
+		it("should throw when not all routes on all servers have been called", async () => {
+			const server1 = new MockServer(BASE_URL);
+			const server2 = new MockServer(ALT_BASE_URL);
+			const fetchMocker = new FetchMocker({
+				servers: [server1, server2],
+			});
+
+			server1.get("/hello", {
+				status: 200,
+				body: "Hello world!",
+			});
+
+			server2.get("/goodbye", {
+				status: 200,
+				body: "Goodbye world!",
+			});
+
+			await fetchMocker.fetch(BASE_URL + "/hello");
+			
+			assert.throws(() => fetchMocker.assertAllRoutesCalled(), {
+				message: `Not all routes were called. Uncalled routes:\n${fetchMocker.uncalledRoutes.join("\n")}`,
+			});
+		});
+	});
 
 	describe("Relative URLs", () => {
 		it("should throw an error when using a relative URL and no baseUrl", async () => {

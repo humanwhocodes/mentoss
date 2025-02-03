@@ -23,7 +23,7 @@ import { getBody } from "./util.js";
 
 /**
  * @typedef {Object} Trace
- * @property {Route} route The route that was checked.
+ * @property {string} title The route that was checked.
  * @property {boolean} matches Whether the route matches the request.
  * @property {string[]} messages The messages explaining why the route doesn't match.
  */
@@ -254,7 +254,7 @@ export class Route {
 	 * @returns {string} The string representation of the route.
 	 */
 	toString() {
-		return `[Route: ${this.#request.method.toUpperCase()} ${this.#url} -> ${this.#response.status}]`;
+		return `🚧 [Route: ${this.#request.method.toUpperCase()} ${this.#url} -> ${this.#response.status}]`;
 	}
 }
 
@@ -270,13 +270,13 @@ export class MockServer {
 	 * The routes that the server can respond to.
 	 * @type {Array<Route>}
 	 */
-	#unmatchedRoutes = [];
+	#routes = [];
 
 	/**
-	 * The routes the server has already responded to.
-	 * @type {Array<Route>}
+	 * The routes that have been matched.
+	 * @type {WeakSet<Route>}
 	 */
-	#matchedRoutes = [];
+	#matched = new WeakSet();
 
 	/**
 	 * The base URL for the server.
@@ -292,6 +292,25 @@ export class MockServer {
 	constructor(baseUrl) {
 		this.baseUrl = baseUrl;
 	}
+
+	
+	/**
+	 * Returns the routes that have not been matched.
+	 * @returns {Array<Route>} The unmatched routes.
+	 */
+	get #unmatchedRoutes() {
+		return this.#routes.filter(route => !this.#matched.has(route));
+	}
+	
+	/**
+	 * Returns the routes that have been matched.
+	 * @returns {Array<Route>} The matched routes.
+	 */
+	get #matchedRoutes() {
+		return this.#routes.filter(route => this.#matched.has(route));
+	}
+	
+	// #region: Adding Routes
 
 	/**
 	 * Adds a new route to the mock server.
@@ -316,7 +335,7 @@ export class MockServer {
 
 		assertValidResponsePattern(responsePattern);
 
-		this.#unmatchedRoutes.push(
+		this.#routes.push(
 			new Route({
 				request: requestPattern,
 				response: responsePattern,
@@ -408,6 +427,8 @@ export class MockServer {
 		assertNoMethod(request);
 		this.#addRoute("OPTIONS", request, response);
 	}
+	
+	// #endregion: Adding Routes
 
 	/**
 	 * Generates a `Response` for the given `Request` if a route matches.
@@ -437,6 +458,8 @@ export class MockServer {
 			body: await getBody(request),
 		};
 
+		// save to avoid multiple calculations
+		const routes = this.#unmatchedRoutes;
 		const traces = [];
 
 		/*
@@ -445,13 +468,12 @@ export class MockServer {
 		 * list of routes so it can't be matched again.
 		 */
 
-		for (let i = 0; i < this.#unmatchedRoutes.length; i++) {
-			const route = this.#unmatchedRoutes[i];
+		for (let i = 0; i < routes.length; i++) {
+			const route = routes[i];
 			const trace = route.traceMatches(requestPattern);
 
 			if (trace.matches) {
-				this.#unmatchedRoutes.splice(i, 1);
-				this.#matchedRoutes.push(route);
+				this.#matched.add(route);
 
 				/*
 				 * Response constructor doesn't allow setting the URL so we
@@ -465,12 +487,14 @@ export class MockServer {
 				return { response, traces };
 			}
 
-			traces.push({ ...trace, route });
+			traces.push({ ...trace, title: route.toString() });
 		}
 
 		return { response: undefined, traces };
 	}
 
+	// #region Testing Helpers
+	
 	/**
 	 * Determines if a route has been called.
 	 * @param {RequestPattern|string} request The request pattern to check.
@@ -493,6 +517,14 @@ export class MockServer {
 	}
 
 	/**
+	 * Returns the routes that have not been called.
+	 * @returns {string[]} The unmatched routes.
+	 */
+	get uncalledRoutes() {
+		return this.#unmatchedRoutes.map(route => route.toString());
+	}
+
+	/**
 	 * Determines if all routes have been called.
 	 * @returns {boolean} `true` if all routes have been called, `false` if not.
 	 */
@@ -505,8 +537,7 @@ export class MockServer {
 	 * @returns {void}
 	 */
 	clear() {
-		this.#unmatchedRoutes = [];
-		this.#matchedRoutes = [];
+		this.#routes = [];
 	}
 
 	/**
@@ -518,8 +549,10 @@ export class MockServer {
 		if (this.#unmatchedRoutes.length > 0) {
 			const urls = this.#unmatchedRoutes.map(route => route.toString());
 			throw new Error(
-				`Expected all routes to be called but the following routes were not called:\n\n${urls.join("\n")}`,
+				`Not all routes were called. Uncalled routes::\n\n${urls.join("\n")}`,
 			);
 		}
 	}
+	
+	// #endregion: Testing Helpers
 }
