@@ -1,0 +1,144 @@
+---
+title: "Testing Helpers: Mock Server"
+description: The mock server methods that are helpful for testing.
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+The mock server provides several methods to help verify that your requests were made as expected.
+
+## Verifying Route Calls
+
+Tracking which routes have been called is a key part of many tests. The mock server provides several methods and properties to help with this.
+
+### `allRoutesCalled()`
+
+The `allRoutesCalled()` method checks if all routes have been called. It returns `true` if all routes have been called at least once, and `false` otherwise:
+
+```js {9, 12, 15}
+import { MockServer, FetchMocker } from "mentoss";
+
+const server = new MockServer("https://api.example.com");
+const mocker = new FetchMocker({ servers: [server] });
+
+server.get("/users", 200);
+server.post("/users", 200);
+
+console.log(server.allRoutesCalled()); // false
+
+await mocker.fetch("https://api.example.com/users");
+console.log(server.allRoutesCalled()); // false
+
+await mocker.fetch("https://api.example.com/users", { method: "POST" });
+console.log(server.allRoutesCalled()); // true
+```
+
+In this example, the `allRoutesCalled()` method first returns `false` because neither the GET nor the POST `/users` route has been called yet. After both routes have been called, the method returns `true`.
+
+### `assertAllRoutesCalled()`
+
+The `assertAllRoutesCalled()` method is an assertion that checks if all routes have been called. It throws an error if any routes have not been called:
+
+```js {10}
+import { MockServer, FetchMocker } from "mentoss";
+
+const server = new MockServer("https://api.example.com");
+const mocker = new FetchMocker({ servers: [server] });
+
+server.get("/users", 200);
+server.post("/users", 200);
+
+await mocker.fetch("https://api.example.com/users");
+server.assertAllRoutesCalled(); // Error!
+```
+
+The thrown error contains a message with information about the uncalled routes.
+
+### `called()`
+
+The `called()` method checks if a specific route has been called. You can pass either a URL string (which defaults to a GET request) or a request pattern object:
+
+```js {16,25, 27-33}
+import { MockServer, FetchMocker } from "mentoss";
+
+const server = new MockServer("https://api.example.com");
+const mocker = new FetchMocker({ servers: [server] });
+
+server.post(
+	{
+		url: "/users",
+		body: {
+			name: "John Doe",
+		},
+	},
+	200,
+);
+
+console.log(server.called("/users")); // false
+
+await mocker.fetch("https://api.example.com/users", {
+    method: "POST",
+    body: {
+        name: "John Doe",
+    },
+});
+
+console.log(server.called("/users")); // true
+
+console.log(server.called({
+    url: "/users",
+    method: "POST",
+    body: {
+        name: "John Doe",
+    },
+})); // true
+```
+
+In this example, the `called()` method returns `false` because the `/users` route has not been called yet. The matching is done using the same comparison logic as if a `fetch()` request was made to the route.
+
+### `uncalledRoutes`
+
+The `uncalledRoutes` property returns an array with information about uncalled routes. You can use this property to check if any routes have not been called:
+
+```js {11}
+import { MockServer, FetchMocker } from "mentoss";
+
+const server = new MockServer("https://api.example.com");
+const mocker = new FetchMocker({ servers: [server] });
+
+server.get("/users", 200);
+server.post("/users", 200);
+
+await mocker.fetch("https://api.example.com/users");
+
+console.log(server.uncalledRoutes); // ["🚧 [Route: POST https://api.example.com/users -> 200]"]
+```
+
+The `uncalledRoutes` property is helpful when you want to format your own error messages or assertions.
+
+<Aside type="tip">
+The `FetchMocker` class also supports `allRoutesCalled()`, `assertAllRoutesCalled()`, and `called()` methods, as well as the `uncalledRoutes` property. These methods and property work similarly to the `MockServer` methods, but they check if the routes have been called on all servers.
+</Aside>
+
+## Additional Helpers
+
+### `clear()`
+
+The `clear()` method removes all routes from the server so you can reuse the same server for multiple tests.
+
+```js {8}
+import { MockServer, FetchMocker } from "mentoss";
+
+const server = new MockServer("https://api.example.com");
+const mocker = new FetchMocker({ servers: [server] });
+
+server.get("/users", 200);
+
+server.clear();
+
+await mocker.fetch("https://api.example.com/users"); // Error!
+```
+
+<Aside type="note">
+The `FetchMocker#clearAll()` method calls `clear()` on each registered server.
+</Aside>

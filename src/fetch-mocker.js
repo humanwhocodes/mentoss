@@ -50,7 +50,7 @@ Partial matches:
 ${
 	traces
 		.map(trace => {
-			let traceMessage = `🚧 ${trace.route.toString()}:`;
+			let traceMessage = `${trace.title}:`;
 
 			trace.messages.forEach(message => {
 				traceMessage += `\n  ${message}`;
@@ -337,6 +337,8 @@ export class FetchMocker {
 		return preflightData;
 	}
 
+	// #region: Testing Helpers
+	
 	/**
 	 * Determines if a request was made.
 	 * @param {string|RequestPattern} request The request to match.
@@ -358,7 +360,34 @@ export class FetchMocker {
 	allRoutesCalled() {
 		return this.#servers.every(server => server.allRoutesCalled());
 	}
+	
+	/**
+	 * Gets the uncalled routes.
+	 * @return {string[]} The uncalled routes.
+	 */
+	get uncalledRoutes() {
+		return this.#servers.flatMap(server => server.uncalledRoutes);
+	}
+	
+	/**
+	 * Asserts that all routes were called.
+	 * @returns {void}
+	 * @throws {Error} When not all routes were called.
+	 */
+	assertAllRoutesCalled() {
+		const uncalledRoutes = this.uncalledRoutes;
+		
+		if (uncalledRoutes.length > 0) {
+			throw new Error(
+				`Not all routes were called. Uncalled routes:\n${uncalledRoutes.join(
+					"\n",
+				)}`,
+			);
+		}
+	}
 
+	// #endregion: Testing Helpers
+	
 	/**
 	 * Unmocks the global fetch function.
 	 * @returns {void}
