@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.4.0](https://github.com/humanwhocodes/mentoss/compare/mentoss-v0.3.0...mentoss-v0.4.0) (2025-02-05)
+
+
+### Features
+
+* Add test helper methods ([#33](https://github.com/humanwhocodes/mentoss/issues/33)) ([c05baa2](https://github.com/humanwhocodes/mentoss/commit/c05baa27e828b21c6083c029e01f3f5fb936cdd6))
+
+
+### Bug Fixes
+
+* Make Mentoss work in Bun ([#36](https://github.com/humanwhocodes/mentoss/issues/36)) ([d3e1e4b](https://github.com/humanwhocodes/mentoss/commit/d3e1e4bb13c3db9e92069c8a90bd7f021e4df036))
+
 ## [0.3.0](https://github.com/humanwhocodes/mentoss/compare/mentoss-v0.2.0...mentoss-v0.3.0) (2025-01-31)
 
 
