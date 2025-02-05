@@ -532,10 +532,7 @@ describe("FetchMocker", () => {
 			const server = new MockServer(BASE_URL);
 			const fetchMocker = new FetchMocker({ servers: [server] });
 
-			await assert.rejects(fetchMocker.fetch("/hello"), {
-				name: "TypeError",
-				message: "Failed to parse URL from /hello",
-			});
+			await assert.rejects(fetchMocker.fetch("/hello"), /Failed [\w\W]+\/hello/iu);
 		});
 
 		it("should return 200 when using a relative URL and a baseUrl", async () => {

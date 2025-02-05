@@ -190,7 +190,23 @@ export class FetchMocker {
 			const request = new this.#Request(fixedInput, init);
 			let useCors = false;
 			let preflightData;
-
+			
+			/*
+			 * Bun's fetch implementation sets credentials to "include" by default
+			 * and doesn't allow overwriting that value when creating a Request.
+			 * We therefore need to hack it together to make sure this works in
+			 * Bun correctly.
+			 * https://github.com/oven-sh/bun/issues/17052
+			 */
+			if ("Bun" in globalThis) {
+				Object.defineProperty(request, "credentials", {
+					configurable: true,
+					enumerable: true,
+					value: init?.credentials ?? "same-origin",
+					writable: false,
+				});
+			}
+			
 			if (request.credentials === "include") {
 				throw new Error("Credentialed requests are not yet supported.");
 			}

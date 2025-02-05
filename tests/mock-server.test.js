@@ -44,6 +44,7 @@ function createRequest({ method, url, headers = {}, body = undefined }) {
 			requestInit.body = JSON.stringify(body);
 			requestInit.headers["content-type"] = "application/json";
 		} else {
+			requestInit.headers["content-type"] = "text/plain;charset=UTF-8";
 			requestInit.body = body;
 		}
 	}
@@ -260,8 +261,9 @@ describe("MockServer", () => {
 			const response = await server.receive(request);
 			const elapsed = Date.now() - startTime;
 
+			// Note: Bun's clock runs fast so could be a bit under 500ms
 			assert.ok(
-				elapsed >= 500,
+				elapsed >= 475,
 				`Response was delayed ${elapsed}ms, expected at least 500ms.`,
 			);
 			assert.strictEqual(response.url, `${BASE_URL}/test?foo=bar`);
