@@ -37,3 +37,15 @@ export interface ResponsePattern {
 	 */
 	delay?: number;
 }
+
+export interface Credentials {
+	/**
+	 * Returne the credential headers for a given request.
+	 */
+	getHeadersForRequest(request: Request): Headers;
+
+	/**
+	 * Clear all credentials.
+	 */
+	clear(): void;
+}

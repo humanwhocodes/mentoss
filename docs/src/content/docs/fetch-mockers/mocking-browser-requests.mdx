@@ -13,7 +13,7 @@ Perhaps the most significant difference between using `fetch()` in a browser as 
 
 If you try to use a relative URL with `fetch()` in a server-side environment, you'll get an error. This is because the server doesn't know what the base URL should be, so it can't resolve the relative URL. That means the same `fetch()` call that works in the browser won't work in a server environment and it's important to keep that in mind when writing tests.
 
-## Mocking Browser Requests with Mentoss
+## Mock Browser Requests with Mentoss
 
 Mentoss provides a way to mock browser requests in your tests, allowing you to test code that uses `fetch()` without making actual network requests. To mock a browser request, you can provide a `baseUrl` option to the `FetchMocker` constructor. This option specifies the base URL that relative URLs should be resolved against. You can then call a mocked `fetch()` using a relative URL. Here's an example:
 
@@ -59,167 +59,177 @@ In this example, the `baseUrl` option is set to `"https://api.example.com"`, whi
 	defined for the base URL, the request will fail.
 </Aside>
 
-## Mocking CORS Requests
 
-Another important consideration when mocking browser requests is how to handle CORS (Cross-Origin Resource Sharing) requests. CORS is a security feature that restricts which domains can make requests to a server. When you make a request from one domain to another, the server must include the appropriate CORS headers to allow the request to go through. When you set the `baseUrl` option in the `FetchMocker` constructor, Mentoss automatically includes the appropriate CORS headers when a request is made to a different origin.
+## Mock Credentialed Requests
 
-### Simple Requests
+A common use case for browser requests is to include credentials, such as cookies or HTTP authentication, with the request. This is often necessary for making authenticated requests to APIs. Mentoss provides a way to mock these credentialed requests using the `credentials` option in the `FetchMocker` constructor. This option allows you to specify a list of credentials that should be included with each request. 
 
-For [simple requests](https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS#simple_requests), Mentoss automatically includes the `Origin` header on the request. If the server responds with the appropriate `Access-Control-Allow-Origin` header, your code will receive the response as expected. If the server does not respond with the appropriate header, the request will fail. Here's an example:
+The `CookieCredentials` class allows you to mock cookie-based authentication in your tests. This is useful when testing applications that use cookies for maintaining session state or authentication.
 
-```js {19-21}
-import { MockServer, FetchMocker } from "mentoss";
+<Aside type="caution">
+	The `credentials` option must be used with `baseUrl`. There is no way for Mentoss to know which credentials to include with a request if the base URL is not set.
+</Aside>
 
-const BASE_URL = "https://api.example.com";
+### Create a `CookieCredentials` Instance
 
-describe("My API", () => {
-	const server = new MockServer("https://www.example.com");
-	const mocker = new FetchMocker({
-		servers: [server],
-		baseUrl: BASE_URL,
-	});
+You can create a new `CookieCredentials` instance either with or without a base URL:
 
-	// extract the fetch function
-	const myFetch = mocker.fetch;
+```js
+import { CookieCredentials } from "mentoss";
 
-	it("should return a 200 status code", async () => {
-		// set up the route to test
-		server.get("/ping", {
-			status: 200,
-			headers: {
-				"Access-Control-Allow-Origin": BASE_URL,
-			},
-			body: { message: "pong" },
-		});
+// Create credentials for a specific domain
+const credentials = new CookieCredentials("https://example.com");
 
-		// make the request
-		const response = await myFetch("https://www.example.com/ping");
+// Or create credentials without a domain
+const genericCredentials = new CookieCredentials();
+```
 
-		// check the response
-		expect(response.status).to.equal(200);
-	});
+When you create credentials with a base URL, all cookies will be automatically associated with that domain. Without a base URL, you'll need to specify the domain for each cookie.
+
+### Setting Cookies
+
+You can set cookies using the `setCookie()` method. Each cookie requires at least a name and value:
+
+```js
+// With a base URL
+const credentials = new CookieCredentials("https://example.com");
+credentials.setCookie({
+    name: "sessionId",
+    value: "abc123"
+});
+
+// Without a base URL
+const genericCredentials = new CookieCredentials();
+genericCredentials.setCookie({
+    name: "sessionId",
+    value: "abc123",
+    domain: "example.com"  // domain is required when no base URL is set
 });
 ```
 
-In this example, the server responds with the `Access-Control-Allow-Origin` header set to the base URL `"https://api.example.com"`. This allows the request to go through because the origin matches the origin of the fetch mocker's `baseUrl`, and the test passes.
+You can also specify additional cookie attributes:
 
-### Preflighted Requests
-
-For [preflighted requests](https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS#preflighted_requests), Mentoss automatically sends an `OPTIONS` request to the server to check if the request is allowed. If the server responds with the appropriate `Access-Control-Allow-Methods` and `Access-Control-Allow-Headers` headers, the original request will go through. If the server does not respond with the appropriate headers, the request will fail. Here's an example:
-
-```js {16-23}
-import { MockServer, FetchMocker } from "mentoss";
-
-const BASE_URL = "https://api.example.com";
-
-describe("My API", () => {
-	const server = new MockServer("https://www.example.com");
-	const mocker = new FetchMocker({
-		servers: [server],
-		baseUrl: BASE_URL,
-	});
-
-	// extract the fetch function
-	const myFetch = mocker.fetch;
-
-	it("should return a 200 status code", async () => {
-		// this is for the preflight request
-		server.options("/ping", {
-			status: 200,
-			headers: {
-				"Access-Control-Allow-Origin": BASE_URL,
-				"Access-Control-Allow-Headers": "Content-Type",
-			},
-		});
-
-		// this is the route that we want to call
-		server.get("/ping", {
-			status: 200,
-			headers: {
-				"Access-Control-Allow-Origin": BASE_URL,
-			},
-			body: { message: "pong" },
-		});
-
-		// make the request
-		const response = await myFetch("https://www.example.com/ping", {
-			headers: {
-				"Content-Type": "application/json",
-			},
-		});
-
-		// check the response
-		expect(response.status).to.equal(200);
-	});
-});
-```
-
-In this example, the code attempts a request to `"https://www.example.com/ping"`. Because this is a cross-origin request, Mentoss first sends an `OPTIONS` request to the server to check if the request is allowed. The server responds to the preflight request with the appropriate `Access-Control-Allow-Origin` and `Access-Control-Allow-Headers` headers, allowing the original request to go through.
-
-### The Preflight Cache
-
-When a browser makes a preflight request, it caches the response for a period of time (usually 5 minutes but customizable using the `Access-Control-Max-Age` header). This means that if you make the same request again within the cache period, the browser won't send another preflight request. Instead, it will use the cached response to determine if the request is allowed. Mentoss does not currently support caching preflight responses, so each preflight request will result in a new preflight request to the server.
-
-Mentoss caches preflight responses in memory for the duration of the test run. This means that if you make the same preflighted request multiple times within a single test, Mentoss will only send the `OPTIONS` request once. However, you can manually clear the preflight cache by calling the `clearPreflightCache()` method. It's helpful to do this after each test
-
-```js {15-18}
-import { MockServer, FetchMocker } from "mentoss";
-
-const BASE_URL = "https://api.example.com";
-
-describe("My API", () => {
-	const server = new MockServer("https://www.example.com");
-	const mocker = new FetchMocker({
-		servers: [server],
-		baseUrl: BASE_URL,
-	});
-
-	// extract the fetch function
-	const myFetch = mocker.fetch;
-
-	// clear preflight cache entries
-	afterEach(() => {
-		mocker.clearPreflightCache();
-	});
-
-	it("should return a 200 status code", async () => {
-		// this is for the preflight request
-		server.options("/ping", {
-			status: 200,
-			headers: {
-				"Access-Control-Allow-Origin": BASE_URL,
-				"Access-Control-Allow-Headers": "Content-Type",
-			},
-		});
-
-		// this is the route that we want to call
-		server.get("/ping", {
-			status: 200,
-			headers: {
-				"Access-Control-Allow-Origin": BASE_URL,
-			},
-			body: { message: "pong" },
-		});
-
-		// make the request
-		const response = await myFetch("https://www.example.com/ping", {
-			headers: {
-				"Content-Type": "application/json",
-			},
-		});
-
-		// check the response
-		expect(response.status).to.equal(200);
-	});
+```js
+credentials.setCookie({
+    name: "sessionId",
+    value: "abc123",
+    path: "/admin",      // defaults to "/"
+    secure: true,        // defaults to false
+    httpOnly: true       // defaults to false
 });
 ```
 
 <Aside type="tip">
-	The preflight cache is also cleared when you call `mocker.clearAll()`, so
-	you don't need to call `mocker.clearPreflightCache()` if you're already
-	calling `mocker.clearAll()`.
+    The path attribute determines which paths can access the cookie. A cookie with a path of `/admin` will only be sent for requests to `/admin` and its subdirectories.
+</Aside>
+<Aside type="note">
+	Real cookies also allow you to specify an expiration date and the `HttpOnly` flag, but neither is useful for testing purposes and so are not supported.
 </Aside>
 
+### Delete Cookies
+
+To delete a cookie, use the `deleteCookie()` method with the same information used to set it:
+
+```js
+credentials.deleteCookie({
+    name: "sessionId",
+    value: "abc123"
+});
+```
+
+If you included a `domain` or `path` when setting the cookie, you must include it when deleting the cookie as well, as in this example:
+
+```js
+credentials.deleteCookie({
+	name: "sessionId",
+	value: "abc123",
+	domain: "example.com",
+});
+```
+
+### Use `CookieCredentials` with `FetchMocker`
+
+The `CookieCredentials` class is designed to work with `FetchMocker` for testing authenticated requests. When provided, `FetchMocker` will automatically include the specified cookies in requests to matching domains and paths, simulating a real browser environment. Here's a complete example:
+
+```js
+import { MockServer, FetchMocker, CookieCredentials } from "mentoss";
+
+const BASE_URL = "https://example.com";
+
+describe("Authenticated API", () => {
+    const server = new MockServer(BASE_URL);
+    const credentials = new CookieCredentials(BASE_URL);
+    const mocker = new FetchMocker({
+        servers: [server],
+        credentials: [credentials],
+		baseUrl: BASE_URL,
+    });
+
+    beforeEach(() => {
+        // Set up authentication cookie
+        credentials.setCookie({
+            name: "sessionId",
+            value: "abc123"
+        });
+    });
+
+    afterEach(() => {
+        mocker.clearAll();
+    });
+
+    it("should make authenticated request", async () => {
+        server.get({
+			url: "/api/data",
+			headers: {
+				Cookie: "sessionId=abc123"
+			}
+		}, {
+            status: 200,
+            body: { message: "success" }
+        });
+
+        const response = await mocker.fetch("/api/data");
+        expect(response.status).to.equal(200);
+    });
+});
+```
+
+In this example, the cookie will be automatically included in all requests to `example.com`.
+
+### Cookie Matching Rules
+
+Cookies are included in requests based on these rules:
+
+1. The request domain must match or be a subdomain of the cookie's domain
+2. The request path must match or be under the cookie's path
+3. For secure cookies, the request must use HTTPS
+
+For example:
+
+```js
+const credentials = new CookieCredentials("https://example.com");
+
+// Set a secure cookie for /admin path
+credentials.setCookie({
+    name: "adminSession",
+    value: "xyz789",
+    path: "/admin",
+    secure: true
+});
+
+// Will include cookie (matches domain, path, and protocol)
+await fetch("https://example.com/admin/users");
+
+// Won't include cookie (wrong protocol)
+await fetch("http://example.com/admin/users");
+
+// Won't include cookie (wrong path)
+await fetch("https://example.com/user/profile");
+
+// Will include cookie (subdomain is allowed)
+await fetch("https://sub.example.com/admin/users");
+```
+
 <Aside type="caution">
-While CORS support is mostly complete, credentialed requests (requests that include cookies or HTTP authentication information) are not yet supported. Mentoss throws an error if you try to use a credentialed request.
+    Make sure to clear credentials between tests using `mocker.clearAll()` to prevent test interference.
 </Aside>

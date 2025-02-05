@@ -102,6 +102,7 @@ function isForbiddenMethodOverride(header, value) {
 	);
 }
 
+/* eslint-disable no-unused-vars -- saving for later */
 /**
  * Checks if a request header is forbidden for CORS.
  * @param {string} header The header to check.
@@ -110,7 +111,6 @@ function isForbiddenMethodOverride(header, value) {
  * @see https://fetch.spec.whatwg.org/#forbidden-header-name
  */
 function isForbiddenRequestHeader(header, value) {
-	// eslint-disable-line no-unused-vars
 	return (
 		forbiddenRequestHeaders.has(header) ||
 		header.startsWith("proxy-") ||
@@ -118,6 +118,7 @@ function isForbiddenRequestHeader(header, value) {
 		isForbiddenMethodOverride(header, value)
 	);
 }
+/* eslint-enable no-unused-vars */
 
 /**
  * Checks if a Range header value is a simple range according to the Fetch API spec.
@@ -217,15 +218,81 @@ export function assertCorsResponse(response, origin) {
 }
 
 /**
+ * Asserts that the response has the correct CORS headers for credentials.
+ * @param {Response} response The response to check.
+ * @param {string} origin The origin to check against.
+ * @returns {void}
+ * @throws {CorsError} When the response doesn't have the correct CORS headers for credentials.
+ * @see https://fetch.spec.whatwg.org/#http-headers
+ */
+export function assertCorsCredentials(response, origin) {
+	const allowCredentials = response.headers.get(CORS_ALLOW_CREDENTIALS);
+
+	if (!allowCredentials) {
+		throw new CorsError(
+			response.url,
+			origin,
+			"No 'Access-Control-Allow-Credentials' header is present on the requested resource.",
+		);
+	}
+
+	if (allowCredentials !== "true") {
+		throw new CorsError(
+			response.url,
+			origin,
+			"The 'Access-Control-Allow-Credentials' header has a value that is not 'true'.",
+		);
+	}
+
+	if (response.headers.get(CORS_ALLOW_ORIGIN) === "*") {
+		throw new CorsError(
+			response.url,
+			origin,
+			"The 'Access-Control-Allow-Origin' header has a value of '*' which is not allowed when the 'Access-Control-Allow-Credentials' header is 'true'.",
+		);
+	}
+
+	if (response.headers.get(CORS_ALLOW_HEADERS) === "*") {
+		throw new CorsError(
+			response.url,
+			origin,
+			"The 'Access-Control-Allow-Headers' header has a value of '*' which is not allowed when the 'Access-Control-Allow-Credentials' header is 'true'.",
+		);
+	}
+
+	if (response.headers.get(CORS_ALLOW_METHODS) === "*") {
+		throw new CorsError(
+			response.url,
+			origin,
+			"The 'Access-Control-Allow-Methods' header has a value of '*' which is not allowed when the 'Access-Control-Allow-Credentials' header is 'true'.",
+		);
+	}
+
+	if (response.headers.get(CORS_EXPOSE_HEADERS) === "*") {
+		throw new CorsError(
+			response.url,
+			origin,
+			"The 'Access-Control-Expose-Headers' header has a value of '*' which is not allowed when the 'Access-Control-Allow-Credentials' header is 'true'.",
+		);
+	}
+}
+
+/**
  * Processes a CORS response to ensure it's valid and doesn't contain
  * any forbidden headers.
  * @param {Response} response The response to process.
  * @param {string} origin The origin of the request.
+ * @param {boolean} useCorsCredentials `true` if credentials are used, `false` otherwise.
  * @returns {Response} The processed response.
  */
-export function processCorsResponse(response, origin) {
+export function processCorsResponse(response, origin, useCorsCredentials) {
 	// first check that the response is allowed
 	assertCorsResponse(response, origin);
+
+	// check credentials
+	if (useCorsCredentials) {
+		assertCorsCredentials(response, origin);
+	}
 
 	// check if the Access-Control-Expose-Headers header is present
 	const exposedHeaders = response.headers.get(CORS_EXPOSE_HEADERS);
