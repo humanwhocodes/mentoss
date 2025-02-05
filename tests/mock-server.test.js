@@ -44,6 +44,7 @@ function createRequest({ method, url, headers = {}, body = undefined }) {
 			requestInit.body = JSON.stringify(body);
 			requestInit.headers["content-type"] = "application/json";
 		} else {
+			requestInit.headers["content-type"] = "text/plain;charset=UTF-8";
 			requestInit.body = body;
 		}
 	}
