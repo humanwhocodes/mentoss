@@ -56,6 +56,40 @@ function formatBody(body) {
 //-----------------------------------------------------------------------------
 
 /**
+ * Represents an error that occurs when a URL is invalid.
+ * @extends {Error}
+ */
+export class URLParseError extends Error {
+	/**
+	 * Creates a new URLParseError instance.
+	 * @param {string} url The URL that caused the error.
+	 */
+	constructor(url) {
+		super(`Invalid URL: ${url}`);
+		this.name = "URLParseError";
+	}
+}
+
+/**
+ * Parses a URL and returns a URL object. This is used instead
+ * of the URL constructor to provide a standard error message,
+ * because different runtimes use different messages.
+ * @param {string|URL} url The URL to parse.
+ * @returns {URL} The parsed URL.
+ */
+export function parseUrl(url) {
+	if (url instanceof URL) {
+		return url;
+	}
+
+	try {
+		return new URL(url);
+	} catch {
+		throw new URLParseError(url);
+	}
+}
+
+/**
  * Reads the body from a request based on the HTTP headers.
  * @param {Request} request The request to read the body from.
  * @returns {Promise<string|any|FormData|null>} The body of the request.

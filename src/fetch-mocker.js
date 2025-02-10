@@ -24,6 +24,7 @@ import {
 //-----------------------------------------------------------------------------
 
 /** @typedef {import("./types.js").RequestPattern} RequestPattern */
+/** @typedef {import("./types.js").Credentials} Credentials */
 /** @typedef {import("./mock-server.js").MockServer} MockServer */
 /** @typedef {import("./mock-server.js").Trace} Trace */
 
@@ -116,6 +117,12 @@ export class FetchMocker {
 	#servers = [];
 
 	/**
+	 * The credentials for `fetch`.
+	 * @type {Credentials[]}
+	 */
+	#credentials;
+
+	/**
 	 * The CORS preflight data for each URL.
 	 * @type {Map<string, CorsPreflightData>}
 	 */
@@ -156,19 +163,34 @@ export class FetchMocker {
 	 * @param {object} options Options for the instance.
 	 * @param {MockServer[]} options.servers The servers to use.
 	 * @param {string|URL} [options.baseUrl] The base URL to use for relative URLs.
+	 * @param {Credentials[]} [options.credentials] The credentials to use.
 	 * @param {typeof Response} [options.CustomResponse] The Response constructor to use.
 	 * @param {typeof Request} [options.CustomRequest] The Request constructor to use.
 	 */
 	constructor({
 		servers,
 		baseUrl,
+		credentials = [],
 		CustomRequest = globalThis.Request,
 		CustomResponse = globalThis.Response,
 	}) {
 		this.#servers = servers;
+		this.#credentials = credentials;
 		this.#baseUrl = createBaseUrl(baseUrl);
 		this.#Response = CustomResponse;
 		this.#Request = CustomRequest;
+
+		// must be least one server
+		if (!servers || servers.length === 0) {
+			throw new TypeError("At least one server is required.");
+		}
+
+		// credentials can only be used if there is a base URL
+		if (credentials.length > 0 && !baseUrl) {
+			throw new TypeError(
+				"Credentials can only be used with a base URL.",
+			);
+		}
 
 		// create the function here to bind to `this`
 		this.fetch = async (input, init) => {
@@ -189,8 +211,9 @@ export class FetchMocker {
 
 			const request = new this.#Request(fixedInput, init);
 			let useCors = false;
+			let useCorsCredentials = false;
 			let preflightData;
-			
+
 			/*
 			 * Bun's fetch implementation sets credentials to "include" by default
 			 * and doesn't allow overwriting that value when creating a Request.
@@ -206,22 +229,42 @@ export class FetchMocker {
 					writable: false,
 				});
 			}
-			
-			if (request.credentials === "include") {
-				throw new Error("Credentialed requests are not yet supported.");
-			}
 
 			// if there's a base URL then we need to check for CORS
 			if (this.#baseUrl) {
 				const requestUrl = new URL(request.url);
 
-				if (!isSameOrigin(requestUrl, this.#baseUrl)) {
+				if (isSameOrigin(requestUrl, this.#baseUrl)) {
+					// if we aren't explicitly blocking credentials then add them
+					if (request.credentials !== "omit") {
+						this.#attachCredentialsToRequest(request);
+					}
+				} else {
 					useCors = true;
+					const includeCredentials =
+						request.credentials === "include";
 
-					// if it's not a simple request then we'll need a preflight check
-					if (!isCorsSimpleRequest(request)) {
+					if (isCorsSimpleRequest(request)) {
+						if (includeCredentials) {
+							useCorsCredentials = true;
+							this.#attachCredentialsToRequest(request);
+						}
+					} else {
 						preflightData = await this.#preflightFetch(request);
 						preflightData.validate(request, this.#baseUrl.origin);
+
+						if (includeCredentials) {
+							if (!preflightData.allowCredentials) {
+								throw new CorsError(
+									request.url,
+									this.#baseUrl.origin,
+									"Response to preflight request doesn't pass access control check: No 'Access-Control-Allow-Credentials' header is present on the requested resource.",
+								);
+							}
+
+							useCorsCredentials = true;
+							this.#attachCredentialsToRequest(request);
+						}
 					}
 
 					// add the origin header to the request
@@ -236,13 +279,38 @@ export class FetchMocker {
 			const response = await this.#internalFetch(request, init?.body);
 
 			if (useCors && this.#baseUrl) {
-				processCorsResponse(response, this.#baseUrl.origin);
+				processCorsResponse(
+					response,
+					this.#baseUrl.origin,
+					useCorsCredentials,
+				);
 			}
 
 			signal?.throwIfAborted();
 
 			return response;
 		};
+	}
+
+	/**
+	 * Attaches credentials to a request.
+	 * @param {Request} request The request to attach credentials to.
+	 * @returns {void}
+	 */
+	#attachCredentialsToRequest(request) {
+		if (this.#credentials.length === 0) {
+			return;
+		}
+
+		for (const credentials of this.#credentials) {
+			const credentialHeaders = credentials.getHeadersForRequest(request);
+
+			if (credentialHeaders) {
+				for (const [key, value] of credentialHeaders) {
+					request.headers.append(key, value);
+				}
+			}
+		}
 	}
 
 	/**
@@ -354,7 +422,7 @@ export class FetchMocker {
 	}
 
 	// #region: Testing Helpers
-	
+
 	/**
 	 * Determines if a request was made.
 	 * @param {string|RequestPattern} request The request to match.
@@ -376,7 +444,7 @@ export class FetchMocker {
 	allRoutesCalled() {
 		return this.#servers.every(server => server.allRoutesCalled());
 	}
-	
+
 	/**
 	 * Gets the uncalled routes.
 	 * @return {string[]} The uncalled routes.
@@ -384,7 +452,7 @@ export class FetchMocker {
 	get uncalledRoutes() {
 		return this.#servers.flatMap(server => server.uncalledRoutes);
 	}
-	
+
 	/**
 	 * Asserts that all routes were called.
 	 * @returns {void}
@@ -392,7 +460,7 @@ export class FetchMocker {
 	 */
 	assertAllRoutesCalled() {
 		const uncalledRoutes = this.uncalledRoutes;
-		
+
 		if (uncalledRoutes.length > 0) {
 			throw new Error(
 				`Not all routes were called. Uncalled routes:\n${uncalledRoutes.join(
@@ -403,7 +471,7 @@ export class FetchMocker {
 	}
 
 	// #endregion: Testing Helpers
-	
+
 	/**
 	 * Unmocks the global fetch function.
 	 * @returns {void}
@@ -436,6 +504,7 @@ export class FetchMocker {
 	 */
 	clearAll() {
 		this.#servers.forEach(server => server.clear());
+		this.#credentials.forEach(credentials => credentials.clear());
 		this.clearPreflightCache();
 	}
 }

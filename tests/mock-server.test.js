@@ -1020,9 +1020,8 @@ describe("MockServer", () => {
 			server.assertAllRoutesCalled();
 		});
 	});
-	
+
 	describe("uncalledRoutes", () => {
-		
 		it("should return all uncalled routes when one is called", async () => {
 			server.get("/test", { status: 200, body: "OK" });
 			server.get("/test2", { status: 200, body: "OK" });
@@ -1039,7 +1038,7 @@ describe("MockServer", () => {
 				"🚧 [Route: POST https://example.com/test2 -> 200]",
 			]);
 		});
-		
+
 		it("should return no uncalled routes when all are called", async () => {
 			server.get("/test", { status: 200, body: "OK" });
 			server.get("/test2", { status: 200, body: "OK" });
@@ -1066,7 +1065,6 @@ describe("MockServer", () => {
 
 			assert.deepStrictEqual(server.uncalledRoutes, []);
 		});
-		
 	});
 
 	describe("Input validation", () => {

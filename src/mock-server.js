@@ -293,7 +293,6 @@ export class MockServer {
 		this.baseUrl = baseUrl;
 	}
 
-	
 	/**
 	 * Returns the routes that have not been matched.
 	 * @returns {Array<Route>} The unmatched routes.
@@ -301,7 +300,7 @@ export class MockServer {
 	get #unmatchedRoutes() {
 		return this.#routes.filter(route => !this.#matched.has(route));
 	}
-	
+
 	/**
 	 * Returns the routes that have been matched.
 	 * @returns {Array<Route>} The matched routes.
@@ -309,7 +308,7 @@ export class MockServer {
 	get #matchedRoutes() {
 		return this.#routes.filter(route => this.#matched.has(route));
 	}
-	
+
 	// #region: Adding Routes
 
 	/**
@@ -427,7 +426,7 @@ export class MockServer {
 		assertNoMethod(request);
 		this.#addRoute("OPTIONS", request, response);
 	}
-	
+
 	// #endregion: Adding Routes
 
 	/**
@@ -494,7 +493,7 @@ export class MockServer {
 	}
 
 	// #region Testing Helpers
-	
+
 	/**
 	 * Determines if a route has been called.
 	 * @param {RequestPattern|string} request The request pattern to check.
@@ -553,6 +552,6 @@ export class MockServer {
 			);
 		}
 	}
-	
+
 	// #endregion: Testing Helpers
 }
