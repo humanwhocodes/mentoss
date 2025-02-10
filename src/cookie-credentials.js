@@ -131,7 +131,7 @@ class Cookie {
 	 * @returns {string}
 	 */
 	get key() {
-		return JSON.stringify([this.name, this.domain, this.path, this.secure]);
+		return Cookie.getKey(this.name, this.domain, this.path, this.secure);
 	}
 
 	/**
@@ -181,6 +181,18 @@ class Cookie {
 		}
 
 		return cookieString + "]";
+	}
+	
+	/**
+	 * Returns a unique key for a cookie based on its properties.
+	 * @param {string} name The name of the cookie.
+	 * @param {string} domain The domain of the cookie.
+	 * @param {string} [path="/"] The path of the cookie.
+	 * @param {boolean} [secure=false] The secure flag of the cookie.
+	 * @returns {string} The unique key for the cookie.
+	 */
+	static getKey(name, domain, path = "/", secure = false) {
+		return JSON.stringify([name, domain, path, secure]);
 	}
 }
 
@@ -270,20 +282,25 @@ export class CookieCredentials {
 
 	/**
 	 * Deletes a cookie from the cookie credentials.
-	 * @param {CookieInfo} cookieInfo The cookie to delete.
+	 * @param {Omit<CookieInfo, "value">} cookieInfo The cookie to delete.
 	 * @returns {void}
 	 * @throws {TypeError} If the cookie does not exist.
 	 */
 	deleteCookie(cookieInfo) {
-		const cookie = new Cookie({
-			domain: this.#domain,
-			path: this.#basePath,
-			...cookieInfo,
-		});
-		const cookieKey = cookie.key;
+		
+		
+		if (!cookieInfo.name) {
+			throw new TypeError("Cookie name is required.");
+		}
+		
+		if (!cookieInfo.domain && !this.#domain) {
+			throw new TypeError("Domain is required to delete a cookie.");
+		}
+		
+		const cookieKey = Cookie.getKey(cookieInfo.name, String(cookieInfo.domain ?? this.#domain), cookieInfo.path, cookieInfo.secure);
 
 		if (!this.#cookies.has(cookieKey)) {
-			throw new TypeError(`Cookie does not exist: ${cookie.toString()}`);
+			throw new TypeError(`Cookie does not exist: ${cookieInfo.toString()}`);
 		}
 
 		this.#cookies.delete(cookieKey);

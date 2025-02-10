@@ -218,16 +218,15 @@ describe("CookieCredentials", () => {
 					});
 				}, /name is required/gi);
 			});
-
-			it("should throw an error when value is missing", () => {
+			
+			it("should throw an error when domain is missing", () => {
 				const credentials = new CookieCredentials();
 
 				assert.throws(() => {
 					credentials.deleteCookie({
 						name: "session",
-						domain: BASE_DOMAIN,
 					});
-				}, /value is required/gi);
+				}, /Domain is required/gi);
 			});
 		});
 	});
@@ -383,6 +382,7 @@ describe("CookieCredentials", () => {
 				);
 				assert.strictEqual(headers.get("Cookie"), null);
 			});
+			
 		});
 	});
 });

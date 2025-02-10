@@ -119,21 +119,21 @@ credentials.setCookie({
 });
 ```
 
-<Aside type="tip">
-    The path attribute determines which paths can access the cookie. A cookie with a path of `/admin` will only be sent for requests to `/admin` and its subdirectories.
-</Aside>
 <Aside type="note">
 	Real cookies also allow you to specify an expiration date and the `HttpOnly` flag, but neither is useful for testing purposes and so are not supported.
 </Aside>
 
+<Aside type="caution">
+If you called `setCookie()` multiple times with the same cookie name, domain, path, and secure flag, an error will be thrown. This is to prevent you from accidentally changing the value of a cookie. If you want to update a cookie's value, you should call `deleteCookie()` first.
+</Aside>
+
 ### Delete Cookies
 
-To delete a cookie, use the `deleteCookie()` method with the same information used to set it:
+To delete a cookie, use the `deleteCookie()` method with the same information used to set it (except for the value):
 
 ```js
 credentials.deleteCookie({
     name: "sessionId",
-    value: "abc123"
 });
 ```
 
@@ -142,7 +142,6 @@ If you included a `domain` or `path` when setting the cookie, you must include i
 ```js
 credentials.deleteCookie({
 	name: "sessionId",
-	value: "abc123",
 	domain: "example.com",
 });
 ```
