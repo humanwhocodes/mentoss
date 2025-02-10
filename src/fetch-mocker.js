@@ -18,6 +18,7 @@ import {
 	CORS_ORIGIN,
 	CorsError,
 } from "./cors.js";
+import { createCustomRequest } from "./custom-request.js";
 
 //-----------------------------------------------------------------------------
 // Type Definitions
@@ -178,7 +179,7 @@ export class FetchMocker {
 		this.#credentials = credentials;
 		this.#baseUrl = createBaseUrl(baseUrl);
 		this.#Response = CustomResponse;
-		this.#Request = CustomRequest;
+		this.#Request = createCustomRequest(CustomRequest);
 
 		// must be least one server
 		if (!servers || servers.length === 0) {
@@ -213,22 +214,6 @@ export class FetchMocker {
 			let useCors = false;
 			let useCorsCredentials = false;
 			let preflightData;
-
-			/*
-			 * Bun's fetch implementation sets credentials to "include" by default
-			 * and doesn't allow overwriting that value when creating a Request.
-			 * We therefore need to hack it together to make sure this works in
-			 * Bun correctly.
-			 * https://github.com/oven-sh/bun/issues/17052
-			 */
-			if ("Bun" in globalThis) {
-				Object.defineProperty(request, "credentials", {
-					configurable: true,
-					enumerable: true,
-					value: init?.credentials ?? "same-origin",
-					writable: false,
-				});
-			}
 
 			// if there's a base URL then we need to check for CORS
 			if (this.#baseUrl) {
