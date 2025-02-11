@@ -249,7 +249,7 @@ describe("MockServer", () => {
 			assert.strictEqual(response.url, `${BASE_URL}/test?foo=bar`);
 		});
 
-		xit("should delay the response by at least 500ms", async () => {
+		it("should delay the response by at least 500ms", async () => {
 			server.get("/test", { status: 200, body: "OK", delay: 500 });
 
 			const request = createRequest({
@@ -269,7 +269,7 @@ describe("MockServer", () => {
 			assert.strictEqual(response.url, `${BASE_URL}/test?foo=bar`);
 		});
 		
-		xdescribe("ResponseCreator Functions", () => {
+		describe("ResponseCreator Functions", () => {
 			
 			afterEach(() => {
 				server.assertAllRoutesCalled();
