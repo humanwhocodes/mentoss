@@ -334,7 +334,7 @@ export class RequestMatcher {
 						],
 					};
 				}
-				console.log("hi");
+				
 				// body is an object so proceed
 				if (!deepCompare(request.body, this.#body)) {
 					return {
