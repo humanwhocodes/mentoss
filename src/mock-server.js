@@ -136,6 +136,12 @@ export class Route {
 	 * @type {RequestPattern}
 	 */
 	#request;
+	
+	/**
+	 * The response to return for the route.
+	 * @type {ResponsePattern|undefined}
+	 */
+	#response;
 
 	/**
 	 * The response pattern for the route.
@@ -159,11 +165,13 @@ export class Route {
 	 * Creates a new instance.
 	 * @param {Object} options The route options.
 	 * @param {RequestPattern} options.request The request to match.
+	 * @param {ResponsePattern|undefined} options.response The response to return.
 	 * @param {ResponseCreator} options.createResponse The response creator to call.
 	 * @param {string} options.baseUrl The base URL for the server.
 	 */
-	constructor({ request, createResponse, baseUrl }) {
+	constructor({ request, response, createResponse, baseUrl }) {
 		this.#request = request;
+		this.#response = response;
 		this.#createResponse = createResponse;
 		this.#matcher = new RequestMatcher({ baseUrl, ...request });
 		this.#url = new URL(request.url, baseUrl).href;
@@ -198,7 +206,7 @@ export class Route {
 	async createResponse(request, PreferredResponse) {
 		
 		const response = await this.#createResponse(request);
-		const { body, ...init } = typeof response === "number" ? { status: response } : response;
+		const { body, delay, ...init } = typeof response === "number" ? { status: response } : response;
 		
 		if (!init.status) {
 			init.status = 200;
@@ -206,6 +214,13 @@ export class Route {
 
 		const statusText = statusTexts.get(init.status);
 
+		// wait for the delay if there is one
+		if (delay) {
+			await new Promise(resolve =>
+				setTimeout(resolve, delay),
+			);
+		}
+		
 		// if the body is an object, return JSON
 		if (typeof body === "object") {
 			return new PreferredResponse(JSON.stringify(body), {
@@ -230,12 +245,6 @@ export class Route {
 			});
 		}
 		
-		if (response.delay) {
-			await new Promise(resolve =>
-				setTimeout(resolve, response.delay),
-			);
-		}
-
 		// otherwise return the body as bytes
 		return new PreferredResponse(body, {
 			...init,
@@ -252,7 +261,8 @@ export class Route {
 	 * @returns {string} The string representation of the route.
 	 */
 	toString() {
-		return `🚧 [Route: ${this.#request.method.toUpperCase()} ${this.#url} -> ${1}]`;
+		const status = this.#response?.status ?? "function";
+		return `🚧 [Route: ${this.#request.method.toUpperCase()} ${this.#url} -> ${status}]`;
 	}
 }
 
@@ -331,17 +341,26 @@ export class MockServer {
 		/** @type {ResponseCreator} */
 		let createResponse;
 		
+		/** @type {ResponsePattern|undefined} */
+		let responsePattern = undefined;
+		
+		/*
+		 * We always want to create a new response function so that the
+		 * route can more easily deal with generating responses. We 
+		 * don't always have a responsePattern if this is a function.
+		 */
 		if (typeof routeResponse === "function") {
-			createResponse = routeResponse;
+			createResponse = /** @type {ResponseCreator} */ (routeResponse);
 		} else {
-			const responsePattern = /** @type {ResponsePattern} */ (routeResponse);
+			responsePattern = /** @type {ResponsePattern} */ (routeResponse);
 			assertValidResponsePattern(responsePattern);
-			createResponse = () => responsePattern;
+			createResponse = () => /** @type {ResponsePattern} */ (responsePattern);
 		}
 
 		this.#routes.push(
 			new Route({
 				request: requestPattern,
+				response: responsePattern,
 				createResponse,
 				baseUrl: this.baseUrl,
 			}),

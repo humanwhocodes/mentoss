@@ -3,7 +3,7 @@ title: Extended Response Patterns
 description: Learn how to use extended response patterns with a mock server
 ---
 
-The second argument of any route method in method in a `MockServer` instance is the response pattern. This pattern can be a number (the HTTP status to return) or an object specifying additional data to return with the response. This is helpful when you're making requests that expect a specific response format.
+The second argument of any route method in method in a `MockServer` instance is the response pattern. This pattern can be a number (the HTTP status to return), an object specifying additional data to return with the response, or a function. This is helpful when you're making requests that expect a specific response format.
 
 ## Extended response pattern keys
 
@@ -16,7 +16,7 @@ The following keys can be used in the response pattern object:
 
 The response pattern keys are used to create a new `Response` object that is returned when the associated request pattern matches the request.
 
-## Responding with a specific status code
+### Respond with a specific status code
 
 If you'd like to respond to a request with a specific status code, you can use the `status` key in the response pattern object. Here's an example:
 
@@ -36,7 +36,7 @@ This route will respond to any GET request to `/users` with a status code of 200
 server.get("/users", 200);
 ```
 
-## Responding with specific headers
+### Respond with specific headers
 
 If you'd like to respond to a request with specific headers, you can use the `headers` key in the response pattern object. Here's an example that simulates a redirect:
 
@@ -55,7 +55,7 @@ server.get("/redirect", {
 
 This route will respond to any GET request to `/redirect` with a status code of 301 and a `Location` header that redirects the client to `https://example.com`.
 
-## Responding with a specific body
+### Respond with a specific body
 
 If you'd like to respond to a request with a specific body, you can use the `body` key in the response pattern object. Here's an example:
 
@@ -75,7 +75,7 @@ server.get("/users", {
 
 This route will respond to any GET request to `/users` with a status code of 200 and a JSON response body containing an `id` and `name` property. There's no need to call `JSON.stringify` on the object; Mentoss will handle that for you.
 
-## Responding with a specific body and headers
+### Respond with a specific body and headers
 
 You can combine the `headers` and `body` keys in the response pattern object to respond to a request with specific headers and a specific body. Here's an example:
 
@@ -98,7 +98,7 @@ server.get("/users", {
 
 This route will respond to any GET request to `/users` with a status code of 200, a `Content-Type` header of `application/json`, and a JSON response body containing an `id` and `name` property.
 
-## Delaying the response
+### Delay the response
 
 If you'd like to delay the response to a request, you can use the `delay` key in the response pattern object. The `delay` property is the number of milliseconds to wait before returning the response. Here's an example:
 
@@ -114,3 +114,50 @@ server.get("/users", {
 ```
 
 This route will respond to any GET request to `/users` with a status code of 200, but it will wait for 1 second before returning the response.
+
+## Use functions for dynamic responses
+
+If you'd like to respond to a request with a dynamic value, you can use a function as the response pattern. The function will receive the request object as its only argument and should return a response pattern object. Here's an example:
+
+```js
+import { MockServer } from "mentoss";
+
+const server = new MockServer("https://api.example.com");
+
+server.get("/users/123", request => {
+	
+	console.log(`Received request: ${request.id}`);
+	
+	return {
+		status: 200,
+		body: {
+			id: "123",
+			name: "Alice",
+		},
+	};
+});
+```
+
+This route will respond to any GET request to `/users/123` with a status code of 200 and a JSON response body containing an `id` and `name` property. The response is generated dynamically based on the request object. The `request` object contains information about the request, such as the URL, headers, and body, and contains an additional `id` property that is a unique identifier for the request.
+
+Response creator functions can also by asynchronous, so you can use `await` to wait for a promise to resolve before returning the response pattern object. Here's an example:
+
+```js
+import { MockServer } from "mentoss";
+
+const server = new MockServer("https://api.example.com");
+
+server.get("/users/123", async request => {
+	await new Promise(resolve => setTimeout(resolve, 1000));
+	
+	return {
+		status: 200,
+		body: {
+			id: "123",
+			name: "Alice",
+		},
+	};
+});
+```
+
+This route will respond to any GET request to `/users/123` with a status code of 200 and a JSON response body containing an `id` and `name` property, but it will wait for 1 second before returning the response. You can use this to simulate network latency or other asynchronous behavior when the `delay` key is not sufficient.
