@@ -52,9 +52,15 @@ jobs:
                   git push -f origin main:v${{ steps.release.outputs.major }}.x
                   git push -f origin main:latest
               if: ${{ steps.release.outputs.release_created }}
+              
+            # Generates the social media post
+            - run: node tools/social-post.js > social-post.txt
+              if: ${{ steps.release.outputs.release_created }}
+              env:
+                OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
             # Tweets out release announcement
-            - run: 'npx @humanwhocodes/crosspost -t -b -m "Mentoss v${{ steps.release.outputs.major }}.${{ steps.release.outputs.minor }}.${{ steps.release.outputs.patch }} has been released!\n\n${{ github.event.repository.html_url }}/releases/tag/${{ steps.release.outputs.tag_name }}"'
+            - run: 'npx @humanwhocodes/crosspost -t -b -m -f social-post.txt'
               if: ${{ steps.release.outputs.release_created }}
               env:
                   TWITTER_API_CONSUMER_KEY: ${{ secrets.TWITTER_CONSUMER_KEY }}
