@@ -20,6 +20,7 @@ import { getBody } from "./util.js";
 /** @typedef {import("./types.js").RequestPattern} RequestPattern */
 /** @typedef {import("./types.js").MethodlessRequestPattern} MethodlessRequestPattern */
 /** @typedef {import("./types.js").ResponsePattern} ResponsePattern */
+/** @typedef {import("./types.js").ResponseCreator} ResponseCreator */
 
 /**
  * @typedef {Object} Trace
@@ -138,9 +139,9 @@ export class Route {
 
 	/**
 	 * The response pattern for the route.
-	 * @type {ResponsePattern}
+	 * @type {ResponseCreator}
 	 */
-	#response;
+	#createResponse;
 
 	/**
 	 * The matcher for the route.
@@ -158,12 +159,12 @@ export class Route {
 	 * Creates a new instance.
 	 * @param {Object} options The route options.
 	 * @param {RequestPattern} options.request The request to match.
-	 * @param {ResponsePattern} options.response The response to return.
+	 * @param {ResponseCreator} options.createResponse The response creator to call.
 	 * @param {string} options.baseUrl The base URL for the server.
 	 */
-	constructor({ request, response, baseUrl }) {
+	constructor({ request, createResponse, baseUrl }) {
 		this.#request = request;
-		this.#response = response;
+		this.#createResponse = createResponse;
 		this.#matcher = new RequestMatcher({ baseUrl, ...request });
 		this.#url = new URL(request.url, baseUrl).href;
 	}
@@ -190,12 +191,15 @@ export class Route {
 	 * Creates a Response object from a route's response pattern. If the body
 	 * is an object then the response will be JSON; if the body is a string
 	 * then the response will be text; otherwise the response will be bytes.
+	 * @param {Request} request The request that was received.
 	 * @param {typeof Response} PreferredResponse The Response constructor to use.
-	 * @returns {Response} The response to return.
+	 * @returns {Promise<Response>} The response to return.
 	 */
-	createResponse(PreferredResponse) {
-		const { body, ...init } = this.#response;
-
+	async createResponse(request, PreferredResponse) {
+		
+		const response = await this.#createResponse(request);
+		const { body, ...init } = typeof response === "number" ? { status: response } : response;
+		
 		if (!init.status) {
 			init.status = 200;
 		}
@@ -225,6 +229,12 @@ export class Route {
 				},
 			});
 		}
+		
+		if (response.delay) {
+			await new Promise(resolve =>
+				setTimeout(resolve, response.delay),
+			);
+		}
 
 		// otherwise return the body as bytes
 		return new PreferredResponse(body, {
@@ -238,23 +248,11 @@ export class Route {
 	}
 
 	/**
-	 * Creates a delay as specified by the route's response pattern.
-	 * @returns {Promise<void>} A promise that resolves when the delay is over.
-	 */
-	async delay() {
-		if (this.#response.delay) {
-			await new Promise(resolve =>
-				setTimeout(resolve, this.#response.delay),
-			);
-		}
-	}
-
-	/**
 	 * Returns a string representation of the route.
 	 * @returns {string} The string representation of the route.
 	 */
 	toString() {
-		return `🚧 [Route: ${this.#request.method.toUpperCase()} ${this.#url} -> ${this.#response.status}]`;
+		return `🚧 [Route: ${this.#request.method.toUpperCase()} ${this.#url} -> ${1}]`;
 	}
 }
 
@@ -329,15 +327,22 @@ export class MockServer {
 		});
 
 		assertValidRequestPattern(requestPattern);
-
-		const responsePattern = /** @type {ResponsePattern} */ (routeResponse);
-
-		assertValidResponsePattern(responsePattern);
+		
+		/** @type {ResponseCreator} */
+		let createResponse;
+		
+		if (typeof routeResponse === "function") {
+			createResponse = routeResponse;
+		} else {
+			const responsePattern = /** @type {ResponsePattern} */ (routeResponse);
+			assertValidResponsePattern(responsePattern);
+			createResponse = () => responsePattern;
+		}
 
 		this.#routes.push(
 			new Route({
 				request: requestPattern,
-				response: responsePattern,
+				createResponse,
 				baseUrl: this.baseUrl,
 			}),
 		);
@@ -346,7 +351,7 @@ export class MockServer {
 	/**
 	 * Adds a new route to the server.
 	 * @param {RequestPattern} request
-	 * @param {ResponsePattern|number} response
+	 * @param {ResponsePattern|ResponseCreator|number} response
 	 */
 	route(request, response) {
 		// assert that method is provided
@@ -360,7 +365,7 @@ export class MockServer {
 	/**
 	 * Adds a new route that responds to a POST request.
 	 * @param {MethodlessRequestPattern|string} request The request to match.
-	 * @param {ResponsePattern|number} response The response to return.
+	 * @param {ResponsePattern|ResponseCreator|number} response The response to return.
 	 */
 	post(request, response) {
 		assertNoMethod(request);
@@ -370,7 +375,7 @@ export class MockServer {
 	/**
 	 * Adds a new route that responds to a GET request.
 	 * @param {MethodlessRequestPattern|string} request The request to match.
-	 * @param {ResponsePattern|number} response The response to return.
+	 * @param {ResponsePattern|ResponseCreator|number} response The response to return.
 	 */
 	get(request, response) {
 		assertNoMethod(request);
@@ -380,7 +385,7 @@ export class MockServer {
 	/**
 	 * Adds a new route that responds to a PUT request.
 	 * @param {MethodlessRequestPattern|string} request The request to match.
-	 * @param {ResponsePattern|number} response The response to return.
+	 * @param {ResponsePattern|ResponseCreator|number} response The response to return.
 	 */
 	put(request, response) {
 		assertNoMethod(request);
@@ -390,7 +395,7 @@ export class MockServer {
 	/**
 	 * Adds a new route that responds to a DELETE request.
 	 * @param {MethodlessRequestPattern|string} request The request to match.
-	 * @param {ResponsePattern|number} response The response to return.
+	 * @param {ResponsePattern|ResponseCreator|number} response The response to return.
 	 */
 	delete(request, response) {
 		assertNoMethod(request);
@@ -400,7 +405,7 @@ export class MockServer {
 	/**
 	 * Adds a new route that responds to a PATCH request.
 	 * @param {MethodlessRequestPattern|string} request The request to match.
-	 * @param {ResponsePattern|number} response The response to return.
+	 * @param {ResponsePattern|ResponseCreator|number} response The response to return.
 	 */
 	patch(request, response) {
 		assertNoMethod(request);
@@ -410,7 +415,7 @@ export class MockServer {
 	/**
 	 * Adds a new route that responds to a HEAD request.
 	 * @param {MethodlessRequestPattern|string} request The request to match.
-	 * @param {ResponsePattern|number} response The response to return.
+	 * @param {ResponsePattern|ResponseCreator|number} response The response to return.
 	 */
 	head(request, response) {
 		assertNoMethod(request);
@@ -420,7 +425,7 @@ export class MockServer {
 	/**
 	 * Adds a new route that responds to an OPTIONS request.
 	 * @param {MethodlessRequestPattern|string} request The request to match.
-	 * @param {ResponsePattern|number} response The response to return.
+	 * @param {ResponsePattern|ResponseCreator|number} response The response to return.
 	 */
 	options(request, response) {
 		assertNoMethod(request);
@@ -446,6 +451,10 @@ export class MockServer {
 	 * @returns {Promise<{response:Response|undefined,traces: Array<Trace>}>} The trace match result.
 	 */
 	async traceReceive(request, PreferredResponse = Response) {
+		
+		// we need to clone the request before reading from it so we can use it again later
+		const clonedRequest = request.clone();
+		
 		// convert into a RequestPattern so each route doesn't have to read the body
 		const requestPattern = {
 			method: request.method,
@@ -478,10 +487,8 @@ export class MockServer {
 				 * Response constructor doesn't allow setting the URL so we
 				 * need to set it after creating the response.
 				 */
-				const response = route.createResponse(PreferredResponse);
+				const response = await route.createResponse(clonedRequest, PreferredResponse);
 				Object.defineProperty(response, "url", { value: request.url });
-
-				await route.delay();
 
 				return { response, traces };
 			}

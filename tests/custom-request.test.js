@@ -45,17 +45,48 @@ describe("createCustomRequest()", () => {
         assert.strictEqual(request.id, originalId);
     });
 
-    it("should preserve ID when cloning", () => {
-        const request = new CustomRequest(TEST_URL);
-        const clonedRequest = request.clone();
-        
-        assert.strictEqual(clonedRequest.id, request.id);
-    });
-
     it("should maintain standard Request functionality", () => {
         const request = new CustomRequest(TEST_URL);
         
         assert.strictEqual(request.url, TEST_URL);
         assert.ok(request instanceof Request);
     });
+    
+    describe("clone()", () => {
+
+        it("should have the same class as the original request", () => {
+            const request = new CustomRequest(TEST_URL);
+            const clonedRequest = request.clone();
+            
+            assert.ok(clonedRequest instanceof CustomRequest);
+        });
+
+        it("should preserve ID when cloning", () => {
+            const request = new CustomRequest(TEST_URL);
+            const clonedRequest = request.clone();
+
+            assert.strictEqual(clonedRequest.id, request.id);
+        });
+
+        it("should allow reading of body in cloned request", async () => {
+            const request = new CustomRequest(TEST_URL, { method: "POST", body: "Hello, world!" });
+            const clonedRequest = request.clone();
+            const body = await clonedRequest.text();
+            
+            assert.strictEqual(body, "Hello, world!");
+        });
+        
+        it("should allow reading of body in two cloned requests", async () => {
+            const request = new CustomRequest(TEST_URL, { method: "POST", body: "Hello, world!" });
+            const clonedRequest1 = request.clone();
+            const clonedRequest2 = request.clone();
+            const body1 = await clonedRequest1.text();
+            const body2 = await clonedRequest2.text();
+            
+            assert.strictEqual(body1, "Hello, world!");
+            assert.strictEqual(body2, "Hello, world!");
+        });
+        
+    });
+    
 });
