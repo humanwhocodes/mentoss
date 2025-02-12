@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.5.0](https://github.com/humanwhocodes/mentoss/compare/mentoss-v0.4.0...mentoss-v0.5.0) (2025-02-12)
+
+
+### Features
+
+* Add response creator function support ([#45](https://github.com/humanwhocodes/mentoss/issues/45)) ([1af9805](https://github.com/humanwhocodes/mentoss/commit/1af9805748389ee688ed612bc02130b5e4179c98))
+* Mocking credentialed requests ([#39](https://github.com/humanwhocodes/mentoss/issues/39)) ([cacb6d0](https://github.com/humanwhocodes/mentoss/commit/cacb6d0b69b9dc6753e96c42a9c31d94f0fa312b))
+
 ## [0.4.0](https://github.com/humanwhocodes/mentoss/compare/mentoss-v0.3.0...mentoss-v0.4.0) (2025-02-05)
 
 
