@@ -80,4 +80,6 @@ const { html_url: url, tag_name: tagName, body } = await getLatestRelease();
 const version = tagName.slice(tagName.indexOf("-") + 1);
 
 const post = await generateSocialPost(version, body, url);
+
+/* eslint-disable-next-line no-console */
 console.log(post);
