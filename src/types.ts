@@ -38,6 +38,13 @@ export interface ResponsePattern {
 	delay?: number;
 }
 
+/**
+ * Create a response based on the request.
+ * @param request The request to create a response for.
+ * @returns The response to send back.
+ */
+export type ResponseCreator = (request: Request) => ResponsePattern | number | Promise<ResponsePattern> | Promise<number>;
+
 export interface Credentials {
 	/**
 	 * Returne the credential headers for a given request.

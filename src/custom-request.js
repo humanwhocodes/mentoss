@@ -62,7 +62,16 @@ export function createCustomRequest(RequestClass) {
          * @returns {CustomRequest} A new instance of the request.
          */
         clone() {
-            const clonedRequest = new CustomRequest(this);
+            
+            /*
+             * This is a bit hacky. You can't create a new Request from
+             * one that has already been used, so we first need to create
+             * a clone of the request. Sadly, the clone is always a Request
+             * instance, so we need to create a new CustomRequest instance
+             * from that clone. This is the only way to ensure that the
+             * clone has the same class as the original request.
+             */
+            const clonedRequest = new CustomRequest(super.clone());
             Object.defineProperty(clonedRequest, "id", { value: this.id });
             return clonedRequest;
         }

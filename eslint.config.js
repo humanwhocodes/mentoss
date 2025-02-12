@@ -13,6 +13,9 @@ export default [
 				console: false,
 			},
 		},
+		rules: {
+			"no-console": "error"
+		}
 	},
 	{
 		files: ["tests/**/*.js"],

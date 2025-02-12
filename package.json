@@ -42,7 +42,7 @@
     "fmt": "prettier --write .",
     "prepublishOnly": "npm run build",
     "pretest": "npm run build",
-    "test:unit": "mocha tests/**/*.*",
+    "test:unit": "mocha --exit tests/**/*.*",
     "test:jsr": "npx jsr@latest publish --dry-run",
     "test": "npm run test:unit"
   },
@@ -63,7 +63,7 @@
     "@types/mocha": "^10.0.3",
     "eslint": "^9.0.0",
     "lint-staged": "15.2.1",
-    "mocha": "^11.0.0",
+    "mocha": "^10.8.2",
     "prettier": "^3.3.3",
     "typescript": "^5.6.3",
     "yorkie": "2.0.0"
