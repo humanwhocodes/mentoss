@@ -10,6 +10,7 @@
 //-----------------------------------------------------------------------------
 
 import assert from "node:assert";
+import { forbiddenMethods, forbiddenRequestHeaders } from "../src/cors.js";
 import { MockServer } from "../src/mock-server.js";
 import { FetchMocker } from "../src/fetch-mocker.js";
 import { CookieCredentials } from "../src/cookie-credentials.js";
@@ -1948,6 +1949,94 @@ describe("FetchMocker", () => {
 					assert.strictEqual(response.status, 200);
 				});
 			});
+		});
+		
+		describe("Forbidden headers", () => {
+			
+			[...forbiddenRequestHeaders].forEach(header => {
+				it(`should throw an error when the header is ${header}`, async () => {
+					const server = new MockServer(API_URL);
+					const fetchMocker = new FetchMocker({
+						servers: [server],
+						baseUrl: ALT_BASE_URL,
+					});
+					const url = new URL("/hello", API_URL);
+
+					await assert.rejects(
+						fetchMocker.fetch(url, {
+							headers: {
+								[header]: "Foo",
+							},
+						}),
+						new RegExp(`Header ${header} is not allowed`, "iu"),
+					);
+				});
+			});
+			
+			it("should throw an error when the header begins with sec-", async () => {
+				const server = new MockServer(API_URL);
+				const fetchMocker = new FetchMocker({
+					servers: [server],
+					baseUrl: ALT_BASE_URL,
+				});
+				const url = new URL("/hello", API_URL);
+
+				await assert.rejects(
+					fetchMocker.fetch(url, {
+						headers: {
+							"sec-foo": "Foo",
+						},
+					}),
+					new RegExp("Header sec-foo is not allowed", "iu"),
+				);
+			});
+			
+			it("should throw an error when the header begins with proxy-", async () => {
+				const server = new MockServer(API_URL);
+				const fetchMocker = new FetchMocker({
+					servers: [server],
+					baseUrl: ALT_BASE_URL,
+				});
+				const url = new URL("/hello", API_URL);
+
+				await assert.rejects(
+					fetchMocker.fetch(url, {
+						headers: {
+							"proxy-foo": "Foo",
+						},
+					}),
+					new RegExp("Header proxy-foo is not allowed", "iu"),
+				);
+			});
+			
+			[
+				"X-Http-Method",
+				"X-Http-Method-Override",
+				"X-Method-Override",
+			].forEach(header => {
+				[...forbiddenMethods].forEach(method => {
+					
+					it(`should throw an error when the ${header} header is ${method}`, async () => {
+						const server = new MockServer(API_URL);
+						const fetchMocker = new FetchMocker({
+							servers: [server],
+							baseUrl: ALT_BASE_URL,
+						});
+						const url = new URL("/hello", API_URL);
+
+						await assert.rejects(
+							fetchMocker.fetch(url, {
+								headers: {
+									[header]: method,
+								},
+							}),
+							new RegExp(`Header ${header} is not allowed`, "iu"),
+						);
+					});
+					
+				});
+			});
+			
 		});
 	});
 

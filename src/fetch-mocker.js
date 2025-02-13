@@ -13,6 +13,7 @@ import {
 	CorsPreflightData,
 	assertCorsResponse,
 	processCorsResponse,
+	validateCorsRequest,
 	CORS_REQUEST_METHOD,
 	CORS_REQUEST_HEADERS,
 	CORS_ORIGIN,
@@ -228,6 +229,8 @@ export class FetchMocker {
 					useCors = true;
 					const includeCredentials =
 						request.credentials === "include";
+						
+					validateCorsRequest(request, this.#baseUrl.origin);
 
 					if (isCorsSimpleRequest(request)) {
 						if (includeCredentials) {
