@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.5.1](https://github.com/humanwhocodes/mentoss/compare/mentoss-v0.5.0...mentoss-v0.5.1) (2025-02-13)
+
+
+### Bug Fixes
+
+* Ensure forbidden CORS headers throw an error ([#51](https://github.com/humanwhocodes/mentoss/issues/51)) ([e472e14](https://github.com/humanwhocodes/mentoss/commit/e472e14e9f9885ed3cc542700f307113e6257336)), closes [#40](https://github.com/humanwhocodes/mentoss/issues/40)
+* Request without a body should not throw an error ([#49](https://github.com/humanwhocodes/mentoss/issues/49)) ([0b6b981](https://github.com/humanwhocodes/mentoss/commit/0b6b981df4050178d56ad7c1dcc25133ebd2c976)), closes [#48](https://github.com/humanwhocodes/mentoss/issues/48)
+
 ## [0.5.0](https://github.com/humanwhocodes/mentoss/compare/mentoss-v0.4.0...mentoss-v0.5.0) (2025-02-12)
 
 
