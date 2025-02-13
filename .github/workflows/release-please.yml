@@ -60,7 +60,7 @@ jobs:
                 OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
             # Tweets out release announcement
-            - run: 'npx @humanwhocodes/crosspost -t -b -m -f social-post.txt'
+            - run: 'npx @humanwhocodes/crosspost -t -b -m --file social-post.txt'
               if: ${{ steps.release.outputs.release_created }}
               env:
                   TWITTER_API_CONSUMER_KEY: ${{ secrets.TWITTER_CONSUMER_KEY }}
