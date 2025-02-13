@@ -72,7 +72,7 @@ const simpleRequestContentTypes = new Set([
 ]);
 
 // the methods that are forbidden to be used with CORS
-const forbiddenMethods = new Set(["CONNECT", "TRACE", "TRACK"]);
+export const forbiddenMethods = new Set(["CONNECT", "TRACE", "TRACK"]);
 
 export const CORS_ALLOW_ORIGIN = "Access-Control-Allow-Origin";
 export const CORS_ALLOW_CREDENTIALS = "Access-Control-Allow-Credentials";
@@ -357,6 +357,38 @@ export function isCorsSimpleRequest(request) {
 	}
 
 	return true;
+}
+
+/**
+ * Validates a CORS request.
+ * @param {Request} request The request to validate.
+ * @param {string} origin The origin of the request.
+ * @returns {void}
+ * @throws {CorsError} When the request is not allowed.
+ */
+export function validateCorsRequest(request, origin) {
+	// check the method
+	if (forbiddenMethods.has(request.method)) {
+		throw new CorsError(
+			request.url,
+			origin,
+			`Method ${request.method} is not allowed.`,
+		);
+	}
+
+	// check the headers
+	for (const header of request.headers.keys()) {
+		
+		const value = /** @type {string} */ (request.headers.get(header));
+		
+		if (isForbiddenRequestHeader(header, value)) {
+			throw new CorsError(
+				request.url,
+				origin,
+				`Header ${header} is not allowed.`,
+			);
+		}
+	}
 }
 
 /**
