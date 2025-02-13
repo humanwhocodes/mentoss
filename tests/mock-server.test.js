@@ -563,6 +563,29 @@ describe("MockServer", () => {
 				"application/json",
 			);
 		});
+		
+		it("should return response when JSON request is sent without a body", async () => {
+			server.post("/test", {
+				status: 200,
+				body: { foo: "bar" },
+			});
+
+			const request = createRequest({
+				method: "POST",
+				url: `${BASE_URL}/test`,
+				headers: {
+					"content-type": "application/json",
+				},
+			});
+
+			const { response } = await server.traceReceive(request);
+			assert.strictEqual(response.status, 200);
+			assert.strictEqual(response.statusText, "OK");
+			assert.strictEqual(
+				response.headers.get("content-type"),
+				"application/json",
+			);
+		});
 	});
 
 	describe("Query Strings", () => {
