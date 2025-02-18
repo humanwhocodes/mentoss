@@ -392,6 +392,44 @@ export function validateCorsRequest(request, origin) {
 }
 
 /**
+ * Gets an array of headers that are not allowed in a CORS simple request.
+ * @param {Request} request The request to check.
+ * @returns {string[]} Array of header names that are not simple headers.
+ */
+export function getNonSimpleHeaders(request) {
+    const result = [];
+    const headers = request.headers;
+
+    for (const header of headers.keys()) {
+        
+        // Range header needs special validation
+        if (header === "range") {
+            const rangeValue = headers.get(header);
+            if (rangeValue && !isSimpleRangeHeader(rangeValue)) {
+                result.push(header);
+            }
+            continue;
+        }
+
+        // Content-Type header needs special validation
+        if (header === "content-type") {
+            const contentType = headers.get(header);
+            if (contentType && !simpleRequestContentTypes.has(contentType)) {
+                result.push(header);
+            }
+            continue;
+        }
+
+        // Check if header is in the safe list
+        if (!safeRequestHeaders.has(header)) {
+            result.push(header);
+        }
+    }
+
+    return result;
+}
+
+/**
  * A class for storing CORS preflight data.
  */
 export class CorsPreflightData {
