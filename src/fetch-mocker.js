@@ -17,8 +17,8 @@ import {
 	CORS_REQUEST_METHOD,
 	CORS_REQUEST_HEADERS,
 	CORS_ORIGIN,
-	CorsError,
-	getNonSimpleHeaders,
+	CorsPreflightError,
+	getUnsafeHeaders,
 } from "./cors.js";
 import { createCustomRequest } from "./custom-request.js";
 
@@ -244,10 +244,10 @@ export class FetchMocker {
 
 						if (includeCredentials) {
 							if (!preflightData.allowCredentials) {
-								throw new CorsError(
+								throw new CorsPreflightError(
 									request.url,
 									this.#baseUrl.origin,
-									"Response to preflight request doesn't pass access control check: No 'Access-Control-Allow-Credentials' header is present on the requested resource.",
+									"No 'Access-Control-Allow-Credentials' header is present on the requested resource.",
 								);
 							}
 
@@ -359,7 +359,7 @@ export class FetchMocker {
 			);
 		}
 		
-		const nonsimpleHeaders = getNonSimpleHeaders(request);
+		const nonsimpleHeaders = getUnsafeHeaders(request);
 		
 		/** @type {Record<string,string>} */
 		const headers = {
@@ -405,10 +405,10 @@ export class FetchMocker {
 
 		// if the preflight response is successful, then we can make the actual request
 		if (!preflightResponse.ok) {
-			throw new CorsError(
+			throw new CorsPreflightError(
 				preflightRequest.url,
 				this.#baseUrl.origin,
-				"Response to preflight request doesn't pass access control check: It does not have HTTP ok status.",
+				"It does not have HTTP ok status.",
 			);
 		}
 

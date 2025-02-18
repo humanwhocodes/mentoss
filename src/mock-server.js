@@ -92,6 +92,11 @@ function assertNoMethod(request) {
  * @throws {TypeError} If the response pattern is invalid.
  */
 function assertValidResponsePattern(responsePattern) {
+	
+	if (!responsePattern) {
+		throw new TypeError("Response pattern is required.");
+	}
+	
 	if (!("status" in responsePattern)) {
 		throw new TypeError("Response pattern must include a status.");
 	}
