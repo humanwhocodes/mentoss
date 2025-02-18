@@ -18,6 +18,7 @@ import {
 	CORS_REQUEST_HEADERS,
 	CORS_ORIGIN,
 	CorsError,
+	getNonSimpleHeaders,
 } from "./cors.js";
 import { createCustomRequest } from "./custom-request.js";
 
@@ -349,6 +350,7 @@ export class FetchMocker {
 	 * @param {Request} request The request to create a preflight request for.
 	 * @returns {Request} The preflight request.
 	 * @throws {Error} When there is no base URL.
+	 * @see https://fetch.spec.whatwg.org/#cors-preflight-fetch
 	 */
 	#createPreflightRequest(request) {
 		if (!this.#baseUrl) {
@@ -356,14 +358,26 @@ export class FetchMocker {
 				"Cannot create preflight request without a base URL.",
 			);
 		}
+		
+		const nonsimpleHeaders = getNonSimpleHeaders(request);
+		
+		/** @type {Record<string,string>} */
+		const headers = {
+			Accept: "*/*",
+			[CORS_REQUEST_METHOD]: request.method,
+			[CORS_ORIGIN]: this.#baseUrl.origin,
+		};
+		
+		if (nonsimpleHeaders.length > 0) {
+			headers[CORS_REQUEST_HEADERS] = nonsimpleHeaders.join(",");
+		}
 
 		return new this.#Request(request.url, {
 			method: "OPTIONS",
-			headers: {
-				[CORS_REQUEST_METHOD]: request.method,
-				[CORS_REQUEST_HEADERS]: [...request.headers.keys()].join(","),
-				[CORS_ORIGIN]: this.#baseUrl.origin,
-			},
+			headers,
+			mode: "cors",
+			referrer: request.referrer,
+			referrerPolicy: request.referrerPolicy,
 		});
 	}
 

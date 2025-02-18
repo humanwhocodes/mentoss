@@ -9,7 +9,7 @@
 //-----------------------------------------------------------------------------
 
 import assert from "node:assert";
-import { isCorsSimpleRequest } from "../src/cors.js";
+import { isCorsSimpleRequest, getNonSimpleHeaders } from "../src/cors.js";
 
 //-----------------------------------------------------------------------------
 // Tests
@@ -173,6 +173,82 @@ describe("http", () => {
 				});
 				assert.strictEqual(isCorsSimpleRequest(request), false);
 			});
+		});
+	});
+	
+	describe("getNonSimpleHeaders()", () => {
+		it("should return empty array for request with no headers", () => {
+			const request = new Request("https://example.com");
+			assert.deepStrictEqual(getNonSimpleHeaders(request), []);
+		});
+
+		it("should return empty array for request with only simple headers", () => {
+			const headers = new Headers({
+				Accept: "application/json",
+				"Accept-Language": "en-US",
+				"Content-Language": "en-US"
+			});
+			const request = new Request("https://example.com", { headers });
+			assert.deepStrictEqual(getNonSimpleHeaders(request), []);
+		});
+
+		it("should return array containing non-simple headers", () => {
+			const headers = new Headers({
+				Accept: "application/json",
+				Authorization: "Bearer token",
+				"X-Custom-Header": "value"
+			});
+			const request = new Request("https://example.com", { headers });
+			assert.deepStrictEqual(
+				getNonSimpleHeaders(request),
+				["authorization", "x-custom-header"]
+			);
+		});
+
+		it("should identify non-simple content-type header", () => {
+			const headers = new Headers({
+				"Content-Type": "application/json"
+			});
+			const request = new Request("https://example.com", { headers });
+			assert.deepStrictEqual(getNonSimpleHeaders(request), ["content-type"]);
+		});
+
+		it("should not include simple content-type header", () => {
+			const headers = new Headers({
+				"Content-Type": "text/plain"
+			});
+			const request = new Request("https://example.com", { headers });
+			assert.deepStrictEqual(getNonSimpleHeaders(request), []);
+		});
+
+		it("should identify invalid range header", () => {
+			const headers = new Headers({
+				Range: "bytes=0-1024,2048-3072"
+			});
+			const request = new Request("https://example.com", { headers });
+			assert.deepStrictEqual(getNonSimpleHeaders(request), ["range"]);
+		});
+
+		it("should not include valid range header", () => {
+			const headers = new Headers({
+				Range: "bytes=0-1024"
+			});
+			const request = new Request("https://example.com", { headers });
+			assert.deepStrictEqual(getNonSimpleHeaders(request), []);
+		});
+
+		it("should identify multiple non-simple headers", () => {
+			const headers = new Headers({
+				Authorization: "Bearer token",
+				"Content-Type": "application/json",
+				Range: "bytes=0-1024,2048-3072",
+				"X-Custom-Header": "value"
+			});
+			const request = new Request("https://example.com", { headers });
+			assert.deepStrictEqual(
+				getNonSimpleHeaders(request),
+				["authorization", "content-type", "range", "x-custom-header"]
+			);
 		});
 	});
 });
