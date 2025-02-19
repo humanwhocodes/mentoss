@@ -1,6 +1,6 @@
 {
   "name": "mentoss",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "description": "A utility to mock fetch requests and responses.",
   "type": "module",
   "module": "dist/index.js",
