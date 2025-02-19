@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.5.2](https://github.com/humanwhocodes/mentoss/compare/mentoss-v0.5.1...mentoss-v0.5.2) (2025-02-19)
+
+
+### Bug Fixes
+
+* Limit Access-Control-Request-Headers to unsafe headers only ([#53](https://github.com/humanwhocodes/mentoss/issues/53)) ([a604e46](https://github.com/humanwhocodes/mentoss/commit/a604e4601807ffb850909f34b1f77a0bec7716f8))
+* Unsafe CORS content-type throws error without Access-Control-Allow-Headers ([#55](https://github.com/humanwhocodes/mentoss/issues/55)) ([ab3136b](https://github.com/humanwhocodes/mentoss/commit/ab3136b9804246fa0f04b4a07f48f1665f7228c0)), closes [#41](https://github.com/humanwhocodes/mentoss/issues/41)
+
 ## [0.5.1](https://github.com/humanwhocodes/mentoss/compare/mentoss-v0.5.0...mentoss-v0.5.1) (2025-02-13)
 
 
