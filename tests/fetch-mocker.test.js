@@ -841,7 +841,7 @@ describe("FetchMocker", () => {
 				server.get("/hello", 200);
 
 				await assert.rejects(fetchMocker.fetch(url), {
-					name: "CorsError",
+					name: "CorsPreflightError",
 					message: `Access to fetch at '${url.href}' from origin '${origin}' has been blocked by CORS policy: Response to preflight request doesn't pass access control check: No 'Access-Control-Allow-Origin' header is present on the requested resource.`,
 				});
 			});
@@ -904,89 +904,92 @@ describe("FetchMocker", () => {
 
 		describe("Preflighted Requests", () => {
 			describe("Access-Control-Allow-Headers", () => {
-				it("should throw an error when the Authorization header is used", async () => {
-					const server = new MockServer(API_URL);
-					const fetchMocker = new FetchMocker({
-						servers: [server],
-						baseUrl: ALT_BASE_URL,
-					});
-					const url = new URL("/hello", API_URL);
-					const origin = new URL(ALT_BASE_URL).origin;
+				describe("Authorization header", () => {
 
-					server.get("/hello", 200);
-					server.options("/hello", {
-						status: 200,
-						headers: {
-							"Access-Control-Allow-Origin": origin,
-						},
+					it("should throw an error when the Authorization header is used", async () => {
+						const server = new MockServer(API_URL);
+						const fetchMocker = new FetchMocker({
+							servers: [server],
+							baseUrl: ALT_BASE_URL,
+						});
+						const url = new URL("/hello", API_URL);
+						const origin = new URL(ALT_BASE_URL).origin;
+
+						server.get("/hello", 200);
+						server.options("/hello", {
+							status: 200,
+							headers: {
+								"Access-Control-Allow-Origin": origin,
+							},
+						});
+
+						await assert.rejects(
+							fetchMocker.fetch(url, {
+								method: "POST",
+								headers: { Authorization: "Bearer 1234" },
+							}),
+							/Header Authorization is not allowed/i,
+						);
 					});
 
-					await assert.rejects(
-						fetchMocker.fetch(url, {
-							method: "POST",
+					it("should throw an error when the Authorization header is used with Access-Control-Requested-Headers=*", async () => {
+						const server = new MockServer(API_URL);
+						const fetchMocker = new FetchMocker({
+							servers: [server],
+							baseUrl: ALT_BASE_URL,
+						});
+						const url = new URL("/hello", API_URL);
+						const origin = new URL(ALT_BASE_URL).origin;
+
+						server.get("/hello", 200);
+						server.options("/hello", {
+							status: 200,
+							headers: {
+								"Access-Control-Allow-Origin": origin,
+								"Access-Control-Allow-Headers": "*",
+							},
+						});
+
+						await assert.rejects(
+							fetchMocker.fetch(url, {
+								method: "POST",
+								headers: { Authorization: "Bearer 1234" },
+							}),
+							/Header Authorization is not allowed/i,
+						);
+					});
+
+					it("should succeed when the Authorization header is used with Access-Control-Requested-Headers=Authorization", async () => {
+						const server = new MockServer(API_URL);
+						const fetchMocker = new FetchMocker({
+							servers: [server],
+							baseUrl: ALT_BASE_URL,
+						});
+						const url = new URL("/hello", API_URL);
+						const origin = new URL(ALT_BASE_URL).origin;
+
+						server.get("/hello", {
+							status: 200,
+							headers: {
+								"Access-Control-Allow-Origin": origin,
+							},
+						});
+
+						server.options("/hello", {
+							status: 200,
+							headers: {
+								"Access-Control-Allow-Origin": origin,
+								"Access-Control-Allow-Headers": "Authorization",
+							},
+						});
+
+						const response = await fetchMocker.fetch(url, {
+							method: "GET",
 							headers: { Authorization: "Bearer 1234" },
-						}),
-						/Header Authorization is not allowed/i,
-					);
-				});
+						});
 
-				it("should throw an error when the Authorization header is used with Access-Control-Requested-Headers=*", async () => {
-					const server = new MockServer(API_URL);
-					const fetchMocker = new FetchMocker({
-						servers: [server],
-						baseUrl: ALT_BASE_URL,
-					});
-					const url = new URL("/hello", API_URL);
-					const origin = new URL(ALT_BASE_URL).origin;
-
-					server.get("/hello", 200);
-					server.options("/hello", {
-						status: 200,
-						headers: {
-							"Access-Control-Allow-Origin": origin,
-							"Access-Control-Allow-Headers": "*",
-						},
-					});
-
-					await assert.rejects(
-						fetchMocker.fetch(url, {
-							method: "POST",
-							headers: { Authorization: "Bearer 1234" },
-						}),
-						/Header Authorization is not allowed/i,
-					);
-				});
-
-				it("should succeed when the Authorization header is used with Access-Control-Requested-Headers=Authorization", async () => {
-					const server = new MockServer(API_URL);
-					const fetchMocker = new FetchMocker({
-						servers: [server],
-						baseUrl: ALT_BASE_URL,
-					});
-					const url = new URL("/hello", API_URL);
-					const origin = new URL(ALT_BASE_URL).origin;
-
-					server.get("/hello", {
-						status: 200,
-						headers: {
-							"Access-Control-Allow-Origin": origin,
-						},
-					});
-
-					server.options("/hello", {
-						status: 200,
-						headers: {
-							"Access-Control-Allow-Origin": origin,
-							"Access-Control-Allow-Headers": "Authorization",
-						},
-					});
-
-					const response = await fetchMocker.fetch(url, {
-						method: "GET",
-						headers: { Authorization: "Bearer 1234" },
-					});
-
-					assert.strictEqual(response.status, 200);
+						assert.strictEqual(response.status, 200);
+					});	
 				});
 				
 				describe("Access-Control-Allow-Headers", () => {
@@ -1206,6 +1209,47 @@ describe("FetchMocker", () => {
 						{ message: PREFLIGHT_FAILED },
 					);
 				});
+				
+				it("should throw an error when an unsafe content-type is used and no Access-Control-Allow-Headers header is returned", async () => {
+					const server = new MockServer(API_URL);
+					const fetchMocker = new FetchMocker({
+						servers: [server],
+						baseUrl: ALT_BASE_URL,
+					});
+					const url = new URL("/hello", API_URL);
+					const origin = new URL(ALT_BASE_URL).origin;
+
+					server.post({
+						url: "/hello",
+						headers: {
+							"Content-Type": "application/json",
+						},
+						body: {
+							name: "value",
+						}
+					}, {
+						status: 204,
+						headers: {
+							"Access-Control-Allow-Origin": origin,
+						},
+					});
+					
+					server.options("/hello", {
+						status: 200,
+						headers: {
+							"Access-Control-Allow-Origin": origin,
+						},
+					});
+
+					await assert.rejects(
+						fetchMocker.fetch(url, {
+							method: "POST",
+							headers: { "Content-Type": "application/json" },
+							body: JSON.stringify({ name: "value" }),
+						}),
+						/Header content-type is not allowed/,
+					);
+				});
 			});
 
 			describe("Access-Control-Allow-Methods", () => {
@@ -1374,7 +1418,7 @@ describe("FetchMocker", () => {
 					await assert.rejects(
 						fetchMocker.fetch(url, { headers: { Custom: "Foo" } }),
 						{
-							name: "CorsError",
+							name: "CorsPreflightError",
 							message: `Access to fetch at '${url.href}' from origin '${origin}' has been blocked by CORS policy: Response to preflight request doesn't pass access control check: No 'Access-Control-Allow-Origin' header is present on the requested resource.`,
 						},
 					);

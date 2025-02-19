@@ -9,7 +9,7 @@
 //-----------------------------------------------------------------------------
 
 import assert from "node:assert";
-import { isCorsSimpleRequest, getNonSimpleHeaders } from "../src/cors.js";
+import { isCorsSimpleRequest, getUnsafeHeaders } from "../src/cors.js";
 
 //-----------------------------------------------------------------------------
 // Tests
@@ -176,10 +176,10 @@ describe("http", () => {
 		});
 	});
 	
-	describe("getNonSimpleHeaders()", () => {
+	describe("getUnsafeHeaders()", () => {
 		it("should return empty array for request with no headers", () => {
 			const request = new Request("https://example.com");
-			assert.deepStrictEqual(getNonSimpleHeaders(request), []);
+			assert.deepStrictEqual(getUnsafeHeaders(request), []);
 		});
 
 		it("should return empty array for request with only simple headers", () => {
@@ -189,7 +189,7 @@ describe("http", () => {
 				"Content-Language": "en-US"
 			});
 			const request = new Request("https://example.com", { headers });
-			assert.deepStrictEqual(getNonSimpleHeaders(request), []);
+			assert.deepStrictEqual(getUnsafeHeaders(request), []);
 		});
 
 		it("should return array containing non-simple headers", () => {
@@ -200,7 +200,7 @@ describe("http", () => {
 			});
 			const request = new Request("https://example.com", { headers });
 			assert.deepStrictEqual(
-				getNonSimpleHeaders(request),
+				getUnsafeHeaders(request),
 				["authorization", "x-custom-header"]
 			);
 		});
@@ -210,7 +210,7 @@ describe("http", () => {
 				"Content-Type": "application/json"
 			});
 			const request = new Request("https://example.com", { headers });
-			assert.deepStrictEqual(getNonSimpleHeaders(request), ["content-type"]);
+			assert.deepStrictEqual(getUnsafeHeaders(request), ["content-type"]);
 		});
 
 		it("should not include simple content-type header", () => {
@@ -218,7 +218,7 @@ describe("http", () => {
 				"Content-Type": "text/plain"
 			});
 			const request = new Request("https://example.com", { headers });
-			assert.deepStrictEqual(getNonSimpleHeaders(request), []);
+			assert.deepStrictEqual(getUnsafeHeaders(request), []);
 		});
 
 		it("should identify invalid range header", () => {
@@ -226,7 +226,7 @@ describe("http", () => {
 				Range: "bytes=0-1024,2048-3072"
 			});
 			const request = new Request("https://example.com", { headers });
-			assert.deepStrictEqual(getNonSimpleHeaders(request), ["range"]);
+			assert.deepStrictEqual(getUnsafeHeaders(request), ["range"]);
 		});
 
 		it("should not include valid range header", () => {
@@ -234,7 +234,7 @@ describe("http", () => {
 				Range: "bytes=0-1024"
 			});
 			const request = new Request("https://example.com", { headers });
-			assert.deepStrictEqual(getNonSimpleHeaders(request), []);
+			assert.deepStrictEqual(getUnsafeHeaders(request), []);
 		});
 
 		it("should identify multiple non-simple headers", () => {
@@ -246,7 +246,7 @@ describe("http", () => {
 			});
 			const request = new Request("https://example.com", { headers });
 			assert.deepStrictEqual(
-				getNonSimpleHeaders(request),
+				getUnsafeHeaders(request),
 				["authorization", "content-type", "range", "x-custom-header"]
 			);
 		});

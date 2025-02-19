@@ -10,6 +10,13 @@
 // the methods allowed for simple requests
 export const safeMethods = new Set(["GET", "HEAD", "POST"]);
 
+// the headers that are always safe for CORS requests
+export const alwaysSafeRequestHeaders = new Set([
+	"accept",
+	"accept-language",
+	"content-language",
+]);	
+
 // the headers allowed for simple requests
 export const safeRequestHeaders = new Set([
 	"accept",
@@ -102,7 +109,6 @@ function isForbiddenMethodOverride(header, value) {
 	);
 }
 
-/* eslint-disable no-unused-vars -- saving for later */
 /**
  * Checks if a request header is forbidden for CORS.
  * @param {string} header The header to check.
@@ -118,7 +124,6 @@ function isForbiddenRequestHeader(header, value) {
 		isForbiddenMethodOverride(header, value)
 	);
 }
-/* eslint-enable no-unused-vars */
 
 /**
  * Checks if a Range header value is a simple range according to the Fetch API spec.
@@ -191,6 +196,28 @@ export class CorsError extends Error {
 }
 
 /**
+ * Represents an error that occurs when a CORS preflight request fails.
+ */
+export class CorsPreflightError extends CorsError {
+	
+	/**
+	 * The name of the error.
+	 * @type {string}
+	 */
+	name = "CorsPreflightError";
+	
+	/**
+	 * Creates a new instance.
+	 * @param {string} requestUrl The URL of the request.
+	 * @param {string} origin The origin of the client making the request.
+	 * @param {string} message The error message.
+	 */
+	constructor(requestUrl, origin, message) {
+		super(requestUrl, origin, `Response to preflight request doesn't pass access control check: ${message}`);
+	}
+}
+
+/**
  * Asserts that the response has the correct CORS headers.
  * @param {Response} response The response to check.
  * @param {string} origin The origin to check against.
@@ -201,10 +228,10 @@ export function assertCorsResponse(response, origin) {
 	const originHeader = response.headers.get(CORS_ALLOW_ORIGIN);
 
 	if (!originHeader) {
-		throw new CorsError(
+		throw new CorsPreflightError(
 			response.url,
 			origin,
-			"Response to preflight request doesn't pass access control check: No 'Access-Control-Allow-Origin' header is present on the requested resource.",
+			"No 'Access-Control-Allow-Origin' header is present on the requested resource.",
 		);
 	}
 
@@ -396,7 +423,7 @@ export function validateCorsRequest(request, origin) {
  * @param {Request} request The request to check.
  * @returns {string[]} Array of header names that are not simple headers.
  */
-export function getNonSimpleHeaders(request) {
+export function getUnsafeHeaders(request) {
     const result = [];
     const headers = request.headers;
 
@@ -529,10 +556,12 @@ export class CorsPreflightData {
 	 */
 	#validateHeaders(request, origin) {
 		const { headers } = request;
-
+		const unsafeHeaders = new Set(getUnsafeHeaders(request));
+		
 		for (const header of headers.keys()) {
+			
 			// simple headers are always allowed
-			if (safeRequestHeaders.has(header)) {
+			if (alwaysSafeRequestHeaders.has(header)) {
 				continue;
 			}
 
@@ -548,7 +577,7 @@ export class CorsPreflightData {
 				);
 			}
 
-			if (!this.allowAllHeaders && !this.allowedHeaders.has(header)) {
+			if (unsafeHeaders.has(header) && !this.allowAllHeaders && !this.allowedHeaders.has(header)) {
 				throw new CorsError(
 					request.url,
 					origin,
