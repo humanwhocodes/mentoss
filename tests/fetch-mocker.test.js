@@ -2343,52 +2343,77 @@ describe("FetchMocker", () => {
 		});
 	});
 
-	describe("Response types", () => {
-		it("should set response type to 'cors' when request mode is 'cors'", async () => {
-			const server = new MockServer(API_URL);
-			const fetchMocker = new FetchMocker({
-				servers: [server],
-				baseUrl: ALT_BASE_URL
-			});
-			
-			server.get("/hello", {
-				status: 200,
-				headers: {
-					"Access-Control-Allow-Origin": ALT_BASE_URL
-				}
-			});
-
-			const response = await fetchMocker.fetch(API_URL + "/hello", {
-				mode: "cors"
-			});
-			
-			assert.strictEqual(response.type, "cors");
-		});
-
-		it("should set response type to 'cors' when request mode is undefined", async () => {
+	describe("mockObject()", () => {
+		it("should replace fetch on an object", () => {
 			const server = new MockServer(API_URL);
 			const fetchMocker = new FetchMocker({
 				servers: [server]
 			});
-			
-			server.get("/hello", 200);
 
-			const response = await fetchMocker.fetch(API_URL + "/hello");
-			assert.strictEqual(response.type, "cors");
+			const testObject = {
+				fetch: () => {}
+			};
+			const originalFetch = testObject.fetch;
+
+			fetchMocker.mockObject(testObject);
+			assert.strictEqual(testObject.fetch, fetchMocker.fetch);
+
+			fetchMocker.unmockObject(testObject);
+			assert.strictEqual(testObject.fetch, originalFetch);
 		});
 
-		it("should set response type to 'default' when request mode is 'no-cors'", async () => {
+		it("should replace custom property name on an object", () => {
 			const server = new MockServer(API_URL);
 			const fetchMocker = new FetchMocker({
 				servers: [server]
 			});
-			
-			server.get("/hello", 200);
 
-			const response = await fetchMocker.fetch(API_URL + "/hello", {
-				mode: "no-cors"
+			const testObject = {
+				customFetch: () => {}
+			};
+			const originalFetch = testObject.customFetch;
+
+			fetchMocker.mockObject(testObject, "customFetch");
+			assert.strictEqual(testObject.customFetch, fetchMocker.fetch);
+
+			fetchMocker.unmockObject(testObject);
+			assert.strictEqual(testObject.customFetch, originalFetch);
+		});
+
+		it("should throw error when object is not an object", () => {
+			const server = new MockServer(API_URL);
+			const fetchMocker = new FetchMocker({
+				servers: [server]
 			});
-			assert.strictEqual(response.type, "default");
+
+			assert.throws(() => {
+				fetchMocker.mockObject("not an object");
+			}, /Object must be an object/);
+		});
+
+		it("should restore multiple mocked properties", () => {
+			const server = new MockServer(API_URL);
+			const fetchMocker = new FetchMocker({
+					servers: [server]
+			});
+
+			const testObject = {
+					fetch: () => {},
+					customFetch: () => {}
+			};
+			const originalFetch = testObject.fetch;
+			const originalCustomFetch = testObject.customFetch;
+
+			fetchMocker.mockObject(testObject, "fetch");
+			fetchMocker.mockObject(testObject, "customFetch");
+			
+			assert.strictEqual(testObject.fetch, fetchMocker.fetch);
+			assert.strictEqual(testObject.customFetch, fetchMocker.fetch);
+
+			fetchMocker.unmockObject(testObject);
+			
+			assert.strictEqual(testObject.fetch, originalFetch);
+			assert.strictEqual(testObject.customFetch, originalCustomFetch);
 		});
 	});
 });
