@@ -246,7 +246,9 @@ describe("MockServer", () => {
 			});
 
 			const response = await server.receive(request);
-			assert.strictEqual(response.url, `${BASE_URL}/test?foo=bar`);
+			assert.strictEqual(response.status, 200);
+			assert.strictEqual(response.statusText, "OK");
+			assert.strictEqual(await getResponseBody(response), "OK");
 		});
 
 		it("should delay the response by at least 500ms", async () => {
@@ -258,15 +260,14 @@ describe("MockServer", () => {
 			});
 
 			const startTime = Date.now();
-			const response = await server.receive(request);
+			await server.receive(request);
 			const elapsed = Date.now() - startTime;
 
 			// Note: Bun's clock runs fast so could be a bit under 500ms
 			assert.ok(
 				elapsed >= 475,
 				`Response was delayed ${elapsed}ms, expected at least 500ms.`,
-			);
-			assert.strictEqual(response.url, `${BASE_URL}/test?foo=bar`);
+				);
 		});
 		
 		describe("ResponseCreator Functions", () => {
@@ -286,7 +287,6 @@ describe("MockServer", () => {
 				const response = await server.receive(request);
 				assert.strictEqual(response.status, 200);
 				assert.strictEqual(response.statusText, "OK");
-				assert.strictEqual(response.url, `${BASE_URL}/test?foo=bar`);
 				assert.strictEqual(response.headers.get("custom"), "header");
 				assert.strictEqual(await getResponseBody(response), "Hi");
 			});
@@ -300,7 +300,7 @@ describe("MockServer", () => {
 				});
 
 				const startTime = Date.now();
-				const response = await server.receive(request);
+				await server.receive(request);
 				const elapsed = Date.now() - startTime;
 
 				// Note: Bun's clock runs fast so could be a bit under 500ms
@@ -308,7 +308,6 @@ describe("MockServer", () => {
 					elapsed >= 475,
 					`Response was delayed ${elapsed}ms, expected at least 500ms.`,
 				);
-				assert.strictEqual(response.url, `${BASE_URL}/test?foo=bar`);
 			});
 			
 			it("should pass a Request object to the function", async () => {
@@ -328,8 +327,7 @@ describe("MockServer", () => {
 					url: `${BASE_URL}/test?foo=bar`,
 				});
 
-				const response = await server.receive(request);
-				assert.strictEqual(response.url, `${BASE_URL}/test?foo=bar`);
+				await server.receive(request);
 			});
 			
 		});

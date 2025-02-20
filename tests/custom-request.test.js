@@ -52,6 +52,12 @@ describe("createCustomRequest()", () => {
         assert.ok(request instanceof Request);
     });
     
+    it("should have a default mode of 'cors'", () => {
+        const request = new CustomRequest(TEST_URL);
+        
+        assert.strictEqual(request.mode, "cors");
+    });
+    
     describe("clone()", () => {
 
         it("should have the same class as the original request", () => {
