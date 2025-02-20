@@ -28,10 +28,11 @@ const BASE_URL = "https://example.com";
  * @param {Object} options Request options
  * @returns {Request} A new request object
  */
-function createRequest({ method, url, headers = {}, body = undefined }) {
+function createRequest({ method, url, headers = {}, body = undefined, mode = "cors" }) {
 	const requestInit = {
 		method,
 		headers,
+		mode
 	};
 
 	if (body !== undefined) {
@@ -586,6 +587,48 @@ describe("MockServer", () => {
 				"application/json",
 			);
 		});
+		
+		describe("Responses", () => {
+			
+			it("should return a response with type of 'cors' when a CORS request is received", async () => {
+				server.get("/test", { status: 200, body: "OK" });
+	
+				const request = createRequest({
+					method: "GET",
+					url: `${BASE_URL}/test`,
+					mode: "cors",
+				});
+	
+				const { response } = await server.traceReceive(request);
+				assert.strictEqual(response.type, "cors");
+			});
+			
+			it("should return a response with type of 'cors' by default (requests are CORS by default)", async () => {
+				server.get("/test", { status: 200, body: "OK" });
+	
+				const request = createRequest({
+					method: "GET",
+					url: `${BASE_URL}/test`,
+				});
+	
+				const { response } = await server.traceReceive(request);
+				assert.strictEqual(response.type, "cors");
+			});
+			
+			it("should return a response with a type of 'same-origin' when a non-CORS request is received", async () => {
+				server.get("/test", { status: 200, body: "OK" });
+	
+				const request = createRequest({
+					method: "GET",
+					url: `${BASE_URL}/test`,
+					mode: "same-origin"
+				});
+				
+				const { response } = await server.traceReceive(request);
+				assert.strictEqual(response.type, "default");
+			});
+		});
+		
 	});
 
 	describe("Query Strings", () => {

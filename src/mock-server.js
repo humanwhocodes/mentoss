@@ -210,8 +210,8 @@ export class Route {
 	 */
 	async createResponse(request, PreferredResponse) {
 		
-		const response = await this.#createResponse(request);
-		const { body, delay, ...init } = typeof response === "number" ? { status: response } : response;
+		const responsePattern = await this.#createResponse(request);
+		const { body, delay, ...init } = typeof responsePattern === "number" ? { status: responsePattern } : responsePattern;
 		
 		if (!init.status) {
 			init.status = 200;
@@ -226,9 +226,11 @@ export class Route {
 			);
 		}
 		
+		let response;
+		
 		// if the body is an object, return JSON
 		if (typeof body === "object") {
-			return new PreferredResponse(JSON.stringify(body), {
+			response = new PreferredResponse(JSON.stringify(body), {
 				...init,
 				statusText,
 				headers: {
@@ -236,11 +238,8 @@ export class Route {
 					...init.headers,
 				},
 			});
-		}
-
-		// if the body is a string, return text
-		if (typeof body === "string") {
-			return new PreferredResponse(body, {
+		} else if (typeof body === "string") {
+			response = new PreferredResponse(body, {
 				...init,
 				statusText,
 				headers: {
@@ -248,17 +247,26 @@ export class Route {
 					...init.headers,
 				},
 			});
+		} else {
+			// otherwise return the body as bytes
+			response = new PreferredResponse(body, {
+				...init,
+				statusText,
+				headers: {
+					"content-type": "application/octet-stream",
+					...init.headers,
+				},
+			});
 		}
+
+		// assign remaining properties
+		// TODO: Figure out when to switch to "basic"
+		const type = request.mode === "cors" ? "cors" : "default";
+
+		Object.defineProperty(response, "url", { enumerable: true, configurable: true, value: request.url });
+		Object.defineProperty(response, "type", { enumerable: true, configurable: true, value: type });
 		
-		// otherwise return the body as bytes
-		return new PreferredResponse(body, {
-			...init,
-			statusText,
-			headers: {
-				"content-type": "application/octet-stream",
-				...init.headers,
-			},
-		});
+		return response;
 	}
 
 	/**
@@ -512,7 +520,6 @@ export class MockServer {
 				 * need to set it after creating the response.
 				 */
 				const response = await route.createResponse(clonedRequest, PreferredResponse);
-				Object.defineProperty(response, "url", { value: request.url });
 
 				return { response, traces };
 			}
