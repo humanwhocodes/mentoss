@@ -114,9 +114,24 @@ After that, you can run the tests via:
 npm test
 ```
 
+## Tips
+
+### Use Mentoss with Jest
+
+[Jest](https://jestjs.io) doesn't support ESM-only modules (like Mentoss) by default. You'll need to update how you call Jest in your `package.json` file to enable ESM support:
+
+```diff
+"scripts": {
+-    "test": "jest",
++    "test": "node --experimental-vm-modules ./node_modules/.bin/jest"
+}
+```
+
+Read more about ESM support in the [Jest documentation](https://jestjs.io/docs/ecmascript-modules).
+
 ## License
 
-Copyright 2024 Nicholas C. Zakas
+Copyright 2024-2025 Nicholas C. Zakas
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
