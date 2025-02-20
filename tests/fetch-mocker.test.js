@@ -2342,4 +2342,53 @@ describe("FetchMocker", () => {
 			);
 		});
 	});
+
+	describe("Response types", () => {
+		it("should set response type to 'cors' when request mode is 'cors'", async () => {
+			const server = new MockServer(API_URL);
+			const fetchMocker = new FetchMocker({
+				servers: [server],
+				baseUrl: ALT_BASE_URL
+			});
+			
+			server.get("/hello", {
+				status: 200,
+				headers: {
+					"Access-Control-Allow-Origin": ALT_BASE_URL
+				}
+			});
+
+			const response = await fetchMocker.fetch(API_URL + "/hello", {
+				mode: "cors"
+			});
+			
+			assert.strictEqual(response.type, "cors");
+		});
+
+		it("should set response type to 'cors' when request mode is undefined", async () => {
+			const server = new MockServer(API_URL);
+			const fetchMocker = new FetchMocker({
+				servers: [server]
+			});
+			
+			server.get("/hello", 200);
+
+			const response = await fetchMocker.fetch(API_URL + "/hello");
+			assert.strictEqual(response.type, "cors");
+		});
+
+		it("should set response type to 'default' when request mode is 'no-cors'", async () => {
+			const server = new MockServer(API_URL);
+			const fetchMocker = new FetchMocker({
+				servers: [server]
+			});
+			
+			server.get("/hello", 200);
+
+			const response = await fetchMocker.fetch(API_URL + "/hello", {
+				mode: "no-cors"
+			});
+			assert.strictEqual(response.type, "default");
+		});
+	});
 });

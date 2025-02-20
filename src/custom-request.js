@@ -35,6 +35,22 @@ export function createCustomRequest(RequestClass) {
             Object.defineProperty(this, "id", { writable: false });
             
             /*
+             * Default setting for `mode` is "cors" in the fetch API.
+             * Not all runtimes follow the spec, so we need to ensure
+             * that the `mode` property is set correctly.
+             */
+            const expectedMode = init?.mode ?? "cors";
+            
+            if (expectedMode !== this.mode) {
+                Object.defineProperty(this, "mode", {
+                    configurable: true,
+                    enumerable: true,
+                    value: expectedMode,
+                    writable: false,
+                });
+            }
+            
+            /*
              * Not all runtimes properly support the `credentials` property.
 			 * Bun's fetch implementation sets credentials to "include" by default
 			 * and doesn't allow overwriting that value when creating a Request.

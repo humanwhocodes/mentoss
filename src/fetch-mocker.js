@@ -324,6 +324,11 @@ export class FetchMocker {
 			);
 
 			if (response) {
+				// Set response.url and type
+				Object.defineProperties(response, {
+					url: { value: request.url },
+					type: { value: request.mode === "cors" ? "cors" : "default" }
+				});
 				return response;
 			}
 

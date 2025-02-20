@@ -512,7 +512,6 @@ export class MockServer {
 				 * need to set it after creating the response.
 				 */
 				const response = await route.createResponse(clonedRequest, PreferredResponse);
-				Object.defineProperty(response, "url", { value: request.url });
 
 				return { response, traces };
 			}
