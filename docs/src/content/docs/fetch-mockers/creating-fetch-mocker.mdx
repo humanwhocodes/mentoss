@@ -114,3 +114,30 @@ describe("My API", () => {
 ```
 
 In this example, the `mockGlobal()` method is called before the tests to mock the global `fetch()` function. The `unmockGlobal()` method is called after the tests to restore the original `fetch()` function. This allows you to use the mocked `fetch()` function in your tests without affecting other parts of your code that rely on the global `fetch()` function.
+
+### Mock `fetch()` on specific objects
+
+You can also mock the `fetch()` function on specific objects using the `mockObject()` and `unmockObject()` methods. This is useful when you want to mock `fetch` only in certain contexts or on specific objects. Here's an example:
+
+```js
+const myApi = {
+    fetch: globalThis.fetch,
+    async getData() {
+        return this.fetch("/api/data");
+    }
+};
+
+// mock fetch only on myApi
+mocker.mockObject(myApi);
+
+// mock fetch with a custom property name
+mocker.mockObject(myApi, "customFetch");
+
+// restore original fetch functions
+mocker.unmockObject(myApi);
+```
+
+This approach is particularly useful when:
+- You want to mock `fetch` only for specific modules or objects
+- You're working with objects that use a different property name for fetch
+- You need to maintain different fetch implementations in different parts of your code

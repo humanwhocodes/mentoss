@@ -150,16 +150,16 @@ export class FetchMocker {
 	#baseUrl;
 
 	/**
-	 * The global fetch function.
-	 * @type {typeof fetch}
-	 */
-	#globalFetch = globalThis.fetch;
-
-	/**
 	 * The created fetch function.
 	 * @type {typeof fetch}
 	 */
 	fetch;
+
+	/**
+	 * Map to store original fetch functions for objects
+	 * @type {WeakMap<object, Map<string, Function>>}
+	 */
+	#originalFetchers = new WeakMap();
 
 	/**
 	 * Creates a new instance.
@@ -480,19 +480,69 @@ export class FetchMocker {
 	// #endregion: Testing Helpers
 
 	/**
-	 * Unmocks the global fetch function.
+	 * Mocks the fetch property on a given object.
+	 * @param {Record<string, any>} object The object to mock fetch on.
+	 * @param {string} [property="fetch"] The property name to mock.
 	 * @returns {void}
+	 * @throws {TypeError} If the object is not an object.
 	 */
-	mockGlobal() {
-		globalThis.fetch = this.fetch;
+	mockObject(object, property = "fetch") {
+		if (!object || typeof object !== "object") {
+			throw new TypeError("Object must be an object.");
+		}
+
+		let originalFetchers = this.#originalFetchers.get(object);
+		
+		if (!originalFetchers) {
+			originalFetchers = new Map();
+			this.#originalFetchers.set(object, originalFetchers);
+		}
+
+		// store original fetch if not already stored
+		if (!originalFetchers.has(property)) {
+			originalFetchers.set(property, object[property]);
+		}
+
+		// replace with mocked fetch
+		object[property] = this.fetch;
 	}
 
 	/**
-	 * Restores the global fetch function.
+	 * Unmocks the fetch property on a given object.
+	 * @param {Record<string, any>} object The object to unmock fetch on.
+	 * @returns {void}
+	 * @throws {TypeError} If the object is not an object.
+	 */
+	unmockObject(object) {
+		if (!object || typeof object !== "object") {
+			throw new TypeError("Object must be an object.");
+		}
+
+		const originalFetchers = this.#originalFetchers.get(object);
+		
+		if (originalFetchers) {
+			// restore all original fetchers
+			for (const [property, originalFetch] of originalFetchers) {
+				object[property] = originalFetch;
+			}
+			this.#originalFetchers.delete(object);
+		}
+	}
+
+	/**
+	 * Mocks the global fetch function.
+	 * @returns {void}
+	 */
+	mockGlobal() {
+		this.mockObject(globalThis);
+	}
+
+	/**
+	 * Unmocks the global fetch function.
 	 * @returns {void}
 	 */
 	unmockGlobal() {
-		globalThis.fetch = this.#globalFetch;
+		this.unmockObject(globalThis);
 	}
 
 	/**
