@@ -481,7 +481,7 @@ export class FetchMocker {
 
 	/**
 	 * Mocks the fetch property on a given object.
-	 * @param {object} object The object to mock fetch on.
+	 * @param {Record<string, any>} object The object to mock fetch on.
 	 * @param {string} [property="fetch"] The property name to mock.
 	 * @returns {void}
 	 * @throws {TypeError} If the object is not an object.
@@ -509,7 +509,7 @@ export class FetchMocker {
 
 	/**
 	 * Unmocks the fetch property on a given object.
-	 * @param {object} object The object to unmock fetch on.
+	 * @param {Record<string, any>} object The object to unmock fetch on.
 	 * @returns {void}
 	 * @throws {TypeError} If the object is not an object.
 	 */
