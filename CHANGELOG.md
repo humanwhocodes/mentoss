@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.6.0](https://github.com/humanwhocodes/mentoss/compare/mentoss-v0.5.2...mentoss-v0.6.0) (2025-02-21)
+
+
+### Features
+
+* Add FetchMocker#mockObject() method to mock non-global fetch ([#59](https://github.com/humanwhocodes/mentoss/issues/59)) ([43495c5](https://github.com/humanwhocodes/mentoss/commit/43495c5aa8c4593e4f50f26e152dc1b6dd513bda))
+* Implement 'no-cors' mode for fetch ([#62](https://github.com/humanwhocodes/mentoss/issues/62)) ([d394e75](https://github.com/humanwhocodes/mentoss/commit/d394e75ff5b03dacad082ee69c23565ae5eaeff2))
+
+
+### Bug Fixes
+
+* Ensure Response#mode is 'cors' when Request#type is 'cors' ([#60](https://github.com/humanwhocodes/mentoss/issues/60)) ([910bc87](https://github.com/humanwhocodes/mentoss/commit/910bc87eb34d1a71e14cc2505c6b2f335ff00bdd))
+
 ## [0.5.2](https://github.com/humanwhocodes/mentoss/compare/mentoss-v0.5.1...mentoss-v0.5.2) (2025-02-19)
 
 
