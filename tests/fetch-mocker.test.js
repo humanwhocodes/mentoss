@@ -2416,4 +2416,84 @@ describe("FetchMocker", () => {
 			assert.strictEqual(testObject.customFetch, originalCustomFetch);
 		});
 	});
+
+	describe("no-cors mode", () => {
+		it("should return an opaque response when mode is no-cors", async () => {
+			const server = new MockServer(API_URL);
+			const fetchMocker = new FetchMocker({
+				servers: [server],
+				baseUrl: ALT_BASE_URL,
+			});
+
+			server.get("/hello", {
+				status: 200,
+				body: "Hello world!",
+			});
+
+			const response = await fetchMocker.fetch(API_URL + "/hello", {
+				mode: "no-cors"
+			});
+
+			assert.strictEqual(response.type, "opaque");
+			assert.strictEqual(response.url, "");
+			assert.strictEqual(response.status, 0);
+			assert.strictEqual(response.statusText, "");
+			assert.strictEqual(response.ok, false);
+			assert.strictEqual(response.redirected, false);
+			assert.strictEqual(response.body, null);
+			assert.strictEqual(response.bodyUsed, false);
+			assert.deepStrictEqual([...response.headers.entries()], []);
+		});
+
+		it("should throw when using no-cors mode with non-simple request", async () => {
+			const server = new MockServer(API_URL);
+			const fetchMocker = new FetchMocker({
+				servers: [server],
+				baseUrl: ALT_BASE_URL,
+			});
+
+			server.put("/hello", {
+				status: 200,
+				body: "Hello world!",
+			});
+
+			await assert.rejects(
+				fetchMocker.fetch(API_URL + "/hello", {
+					mode: "no-cors",
+					method: "PUT"
+				}),
+				{
+					name: "TypeError",
+					message: "Method 'PUT' is not allowed in 'no-cors' mode."
+				}
+			);
+		});
+
+		it("should return an opaque response regardless of actual server response", async () => {
+			const server = new MockServer(API_URL);
+			const fetchMocker = new FetchMocker({
+				servers: [server],
+				baseUrl: ALT_BASE_URL,
+			});
+
+			server.get("/hello", {
+				status: 404,
+				statusText: "Not Found",
+				headers: {
+					"X-Custom": "value"
+				},
+				body: "Not found!"
+			});
+
+			const response = await fetchMocker.fetch(API_URL + "/hello", {
+				mode: "no-cors"
+			});
+
+			assert.strictEqual(response.type, "opaque");
+			assert.strictEqual(response.status, 0);
+			assert.strictEqual(response.statusText, "");
+			assert.deepStrictEqual([...response.headers.entries()], []);
+			assert.strictEqual(response.body, null);
+		});
+	});
 });

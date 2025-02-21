@@ -105,6 +105,32 @@ function isSameOrigin(requestUrl, baseUrl) {
 	return requestUrl.origin === baseUrl.origin;
 }
 
+/**
+ * Creates an opaque response.
+ * @param {typeof Response} ResponseConstructor The Response constructor to use
+ * @returns {Response} An opaque response
+ */
+function createOpaqueResponse(ResponseConstructor) {
+	const response = new ResponseConstructor(null, {
+		status: 200, // doesn't accept a 0 status
+		statusText: "",
+		headers: {},
+	});
+
+	// Define non-configurable properties to match opaque response behavior
+	Object.defineProperties(response, {
+		type: { value: "opaque", configurable: false },
+		url: { value: "", configurable: false },
+		ok: { value: false, configurable: false },
+		redirected: { value: false, configurable: false },
+		body: { value: null, configurable: false },
+		bodyUsed: { value: false, configurable: false },
+		status: { value: 0, configurable: false },
+	});
+
+	return response;
+}
+
 //-----------------------------------------------------------------------------
 // Exports
 //-----------------------------------------------------------------------------
@@ -216,6 +242,7 @@ export class FetchMocker {
 			let useCors = false;
 			let useCorsCredentials = false;
 			let preflightData;
+			let isSimpleRequest = false;
 
 			// if there's a base URL then we need to check for CORS
 			if (this.#baseUrl) {
@@ -228,12 +255,13 @@ export class FetchMocker {
 					}
 				} else {
 					useCors = true;
+					isSimpleRequest = isCorsSimpleRequest(request);
 					const includeCredentials =
 						request.credentials === "include";
 						
 					validateCorsRequest(request, this.#baseUrl.origin);
 
-					if (isCorsSimpleRequest(request)) {
+					if (isSimpleRequest) {
 						if (includeCredentials) {
 							useCorsCredentials = true;
 							this.#attachCredentialsToRequest(request);
@@ -268,6 +296,12 @@ export class FetchMocker {
 			const response = await this.#internalFetch(request, init?.body);
 
 			if (useCors && this.#baseUrl) {
+				
+				// handle no-cors mode for any cross-origin request
+				if (isSimpleRequest && request.mode === "no-cors") {
+					return createOpaqueResponse(this.#Response);
+				}
+				
 				processCorsResponse(
 					response,
 					this.#baseUrl.origin,
@@ -310,6 +344,7 @@ export class FetchMocker {
 	 * @throws {Error} When no route is matched.
 	 */
 	async #internalFetch(request, body = null) {
+
 		const allTraces = [];
 
 		/*
