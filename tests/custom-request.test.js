@@ -52,11 +52,28 @@ describe("createCustomRequest()", () => {
         assert.ok(request instanceof Request);
     });
     
-    it("should have a default mode of 'cors'", () => {
-        const request = new CustomRequest(TEST_URL);
+    describe("mode", () => {
+
+        it("should have a default mode of 'cors'", () => {
+            const request = new CustomRequest(TEST_URL);
+            
+            assert.strictEqual(request.mode, "cors");
+        });
         
-        assert.strictEqual(request.mode, "cors");
+        it("should throw an error when 'no-cors' mode is used with PUT method", () => {
+            assert.throws(() => {
+                new CustomRequest(TEST_URL, { method: "PUT", mode: "no-cors" });
+            }, /Method 'PUT' is not allowed in 'no-cors' mode/);
+        });
+        
+        it("should throw an error when 'no-cors' mode is used with a custom header", () => {
+            assert.throws(() => {
+                new CustomRequest(TEST_URL, { headers: { "X-Custom-Header": "value" }, mode: "no-cors" });
+            }, /Header 'X-Custom-Header' is not allowed in 'no-cors' mode/);
+        });
+        
     });
+    
     
     describe("clone()", () => {
 

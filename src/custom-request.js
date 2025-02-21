@@ -3,6 +3,11 @@
  * @author Nicholas C. Zakas
  */
 
+//-----------------------------------------------------------------------------
+// Imports
+//-----------------------------------------------------------------------------
+
+import { assertValidNoCorsRequestInit } from "./cors.js";
 
 //-----------------------------------------------------------------------------
 // Exports
@@ -29,6 +34,16 @@ export function createCustomRequest(RequestClass) {
          * @param {RequestInit} [init] The options for the fetch.
          */
         constructor(input, init) {
+
+            /*
+             * Not all runtimes validate the `mode` property correctly.
+             * To ensure consistency across runtimes, we do the validation
+             * and throw a consistent error.
+             */
+            if (init?.mode === "no-cors") {
+                assertValidNoCorsRequestInit(init);
+            }
+            
             super(input, init);
             
             // ensure id is not writable

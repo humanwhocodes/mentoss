@@ -78,6 +78,13 @@ const simpleRequestContentTypes = new Set([
 	"text/plain",
 ]);
 
+const noCorsSafeHeaders = new Set([
+	"accept",
+	"accept-language",
+	"content-language",
+	"content-type",
+]);	
+
 // the methods that are forbidden to be used with CORS
 export const forbiddenMethods = new Set(["CONNECT", "TRACE", "TRACK"]);
 
@@ -166,6 +173,74 @@ function isSimpleRangeHeader(range) {
 
 	// if both parts are present, they must both be numbers
 	return firstIsNumber && secondIsNumber;
+}
+
+/**
+ * Checks if a string contains any CORS-unsafe request-header bytes.
+ * @param {string} str The string to check.
+ * @returns {boolean} `true` if the string contains CORS-unsafe bytes, `false` otherwise.
+ * @see https://fetch.spec.whatwg.org/#cors-unsafe-request-header-byte
+ */
+function containsCorsUnsafeRequestHeaderByte(str) {
+	
+	// eslint-disable-next-line no-control-regex
+	const unsafeBytePattern = /[\x00-\x08\x0A-\x1F\x22\x28\x29\x3A\x3C\x3E\x3F\x40\x5B\x5C\x5D\x7B\x7D\x7F]/u;
+	return unsafeBytePattern.test(str);
+}
+
+/**
+ * Checks if a request header is safe to be used with "no-cors" mode.
+ * @param {string} name The name of the header.
+ * @param {string} value The value of the header.
+ * @returns {boolean} `true` if the header is safe, `false` otherwise.
+ * @see https://fetch.spec.whatwg.org/#no-cors-safelisted-request-header-name
+ */
+function isNoCorsSafeListedRequestHeader(name, value) {
+	
+	if (!noCorsSafeHeaders.has(name.toLowerCase())) {
+		return false;
+	}
+	
+	return isCorsSafeListedRequestHeader(name, value);
+}
+
+/**
+ * Checks if a request header is safe to be used with CORS.
+ * @param {string} name The name of the header.
+ * @param {string} value The value of the header.
+ * @returns {boolean} `true` if the header is safe, `false` otherwise.
+ * @see https://fetch.spec.whatwg.org/#cors-safelisted-request-header
+ */
+function isCorsSafeListedRequestHeader(name, value) {
+	
+	if (value.length > 128) {
+		return false;
+	}
+	
+	const hasUnsafeByte = containsCorsUnsafeRequestHeaderByte(value);
+	
+	switch (name.toLowerCase()) {
+		case "accept":
+			return !hasUnsafeByte;
+			
+		case "accept-language":
+		case "content-language":
+			return !/[^0-9A-Za-z *,\-.=;]/.test(value);
+			
+		case "content-type":
+			if (hasUnsafeByte) {
+				return false;
+			}
+			
+			return simpleRequestContentTypes.has(value.toLowerCase());
+			
+		case "range":
+			return isSimpleRangeHeader(value);
+			
+		default:
+			return false;
+	}
+	
 }
 
 //-----------------------------------------------------------------------------
@@ -303,6 +378,40 @@ export function assertCorsCredentials(response, origin) {
 		);
 	}
 }
+
+/**
+ * Asserts that a request is valid for "no-cors" mode.
+ * @param {RequestInit} requestInit The request to check.
+ * @returns {void}
+ * @throws {TypeError} When the request is not valid for "no-cors" mode.
+ */
+export function assertValidNoCorsRequestInit(requestInit = {}) {
+	const headers = requestInit.headers;
+	const method = requestInit.method;
+	
+	// no method means GET
+	if (!method && !headers) {
+		return;
+	}
+	
+	// otherwise check it
+	if (method && !safeMethods.has(method)) {
+		throw new TypeError(`Method '${method}' is not allowed in 'no-cors' mode.`);
+	}
+	
+	// no headers means nothing to check
+	if (!headers) {
+		return;
+	}
+	
+	const headerKeyValues = Array.from(headers instanceof Headers ? headers.entries() : Object.entries(headers));
+
+	for (const [header, value] of headerKeyValues) {
+		if (!isNoCorsSafeListedRequestHeader(header, value)) {
+			throw new TypeError(`Header '${header}' is not allowed in 'no-cors' mode.`);
+		}
+	}
+}	
 
 /**
  * Processes a CORS response to ensure it's valid and doesn't contain
