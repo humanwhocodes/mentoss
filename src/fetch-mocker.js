@@ -239,6 +239,7 @@ export class FetchMocker {
 					: input;
 
 			const request = new this.#Request(fixedInput, init);
+
 			let useCors = false;
 			let useCorsCredentials = false;
 			let preflightData;
@@ -254,6 +255,14 @@ export class FetchMocker {
 						this.#attachCredentialsToRequest(request);
 					}
 				} else {
+										
+					// check for same-origin mode
+					if (request.mode === "same-origin") {
+						throw new TypeError(
+							`Failed to fetch. Request mode is "same-origin" but the URL's origin is not same as the request origin ${this.#baseUrl.origin}`
+						);
+					}
+
 					useCors = true;
 					isSimpleRequest = isCorsSimpleRequest(request);
 					const includeCredentials =
