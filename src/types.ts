@@ -39,11 +39,32 @@ export interface ResponsePattern {
 }
 
 /**
+ * Additional information that's helpful for evaluating a request.
+ */
+export interface RequestInfo {
+	
+	/**
+	 * The cookies sent with the request.
+	 */
+	cookies: Map<string, string>;
+	
+	/**
+	 * The URL parameters found in the request.
+	 */
+	params: Record<string, string|undefined>;
+	
+	/**
+	 * The query parameters found in the request.
+	 */
+	query: URLSearchParams;
+}
+
+/**
  * Create a response based on the request.
  * @param request The request to create a response for.
  * @returns The response to send back.
  */
-export type ResponseCreator = (request: Request) => ResponsePattern | number | Promise<ResponsePattern> | Promise<number>;
+export type ResponseCreator = (request: Request, requestInfo: RequestInfo) => ResponsePattern | number | Promise<ResponsePattern> | Promise<number>;
 
 export interface Credentials {
 	/**
