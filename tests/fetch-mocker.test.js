@@ -2394,12 +2394,12 @@ describe("FetchMocker", () => {
 		it("should restore multiple mocked properties", () => {
 			const server = new MockServer(API_URL);
 			const fetchMocker = new FetchMocker({
-					servers: [server]
+						servers: [server]
 			});
 
 			const testObject = {
-					fetch: () => {},
-					customFetch: () => {}
+						fetch: () => {},
+						customFetch: () => {}
 			};
 			const originalFetch = testObject.fetch;
 			const originalCustomFetch = testObject.customFetch;
@@ -2494,6 +2494,50 @@ describe("FetchMocker", () => {
 			assert.strictEqual(response.statusText, "");
 			assert.deepStrictEqual([...response.headers.entries()], []);
 			assert.strictEqual(response.body, null);
+		});
+	});
+
+	describe("same-origin mode", () => {
+		it("should throw when requesting a different origin with mode=same-origin", async () => {
+			const server = new MockServer(API_URL);
+			const fetchMocker = new FetchMocker({
+				servers: [server],
+				baseUrl: ALT_BASE_URL,
+			});
+
+			server.get("/hello", {
+				status: 200,
+				body: "Hello world!",
+			});
+
+			await assert.rejects(
+				fetchMocker.fetch(API_URL + "/hello", {
+					mode: "same-origin"
+				}),
+				{
+					name: "TypeError",
+					message: `Failed to fetch. Request mode is "same-origin" but the URL's origin is not same as the request origin ${new URL(ALT_BASE_URL).origin}`
+				}
+			);
+		});
+
+		it("should succeed when requesting same origin with mode=same-origin", async () => {
+			const server = new MockServer(API_URL);
+			const fetchMocker = new FetchMocker({
+				servers: [server],
+				baseUrl: API_URL,
+			});
+
+			server.get("/hello", {
+				status: 200,
+				body: "Hello world!"
+			});
+
+			const response = await fetchMocker.fetch(API_URL + "/hello", {
+				mode: "same-origin"
+			});
+
+			assert.strictEqual(response.status, 200);
 		});
 	});
 });
