@@ -3,7 +3,7 @@
  * @author Nicholas C. Zakas
  */
 
-/* globals FormData, Request, TextEncoder */
+/* globals FormData, Request, TextEncoder, URLSearchParams */
 
 //-----------------------------------------------------------------------------
 // Imports
@@ -330,6 +330,62 @@ describe("MockServer", () => {
 				await server.receive(request);
 			});
 			
+			it("should pass request info object as second parameter to response creator", async () => {
+				server.get("/users/:id", (request, info) => {
+					assert.ok(info.cookies instanceof Map);
+					assert.ok(info.query instanceof URLSearchParams);
+					assert.strictEqual(typeof info.params, "object");
+					
+					assert.strictEqual(info.cookies.get("session"), "abc123");
+					assert.strictEqual(info.params.id, "123");
+					assert.strictEqual(info.query.get("sort"), "asc");
+					
+					return { status: 200, body: "OK" };
+				});
+		
+				const request = createRequest({
+					method: "GET",
+					url: `${BASE_URL}/users/123?sort=asc`,
+					headers: {
+						Cookie: "session=abc123"
+					}
+				});
+		
+				const response = await server.receive(request);
+				assert.strictEqual(response.status, 200);
+			});
+			
+			it("should provide empty cookies map when no cookies present", async () => {
+				server.get("/test", (request, info) => {
+					assert.strictEqual(info.cookies.size, 0);
+					return { status: 200 };
+				});
+		
+				const request = createRequest({
+					method: "GET",
+					url: `${BASE_URL}/test`
+				});
+		
+				await server.receive(request);
+			});
+		
+			it("should parse multiple cookies correctly", async () => {
+				server.get("/test", (request, info) => {
+					assert.strictEqual(info.cookies.get("session"), "abc123");
+					assert.strictEqual(info.cookies.get("user"), "john");
+					return { status: 200 };
+				});
+		
+				const request = createRequest({
+					method: "GET",
+					url: `${BASE_URL}/test`,
+					headers: {
+						Cookie: "session=abc123; user=john"
+					}
+				});
+		
+				await server.receive(request);
+			});
 		});
 	});
 

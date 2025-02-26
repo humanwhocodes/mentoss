@@ -342,4 +342,226 @@ describe("RequestMatcher", () => {
 			});
 		});
 	});
+
+	describe("traceMatches()", () => {
+		it("should return success messages when everything matches", () => {
+			const matcher = new RequestMatcher({
+				method: "GET",
+				url: `${BASE_URL}/users/:id`,
+				headers: { "content-type": "application/json" },
+				params: { id: "123" }
+			});
+
+			const request = {
+				method: "GET",
+				url: `${BASE_URL}/users/123`,
+				headers: { "content-type": "application/json" }
+			};
+
+			const result = matcher.traceMatches(request);
+			assert.strictEqual(result.matches, true);
+			assert.deepStrictEqual(result.messages, [
+				"✅ URL matches.",
+				"✅ Method matches: GET.",
+				"✅ URL parameters match.",
+				"✅ Headers match."
+			]);
+			assert.deepStrictEqual(result.params, { id: "123" });
+		});
+
+		it("should return failure message when URL doesn't match", () => {
+			const matcher = new RequestMatcher({
+				method: "GET",
+				url: `${BASE_URL}/users/:id`
+			});
+
+			const request = {
+				method: "GET",
+				url: `${BASE_URL}/posts/123`,
+				headers: {}
+			};
+
+			const result = matcher.traceMatches(request);
+			assert.strictEqual(result.matches, false);
+			assert.deepStrictEqual(result.messages, ["❌ URL does not match."]);
+		});
+
+		it("should return failure message when method doesn't match", () => {
+			const matcher = new RequestMatcher({
+				method: "GET",
+				url: `${BASE_URL}/users/:id`
+			});
+
+			const request = {
+				method: "POST",
+				url: `${BASE_URL}/users/123`,
+				headers: {}
+			};
+
+			const result = matcher.traceMatches(request);
+			assert.strictEqual(result.matches, false);
+			assert.deepStrictEqual(result.messages, [
+				"✅ URL matches.",
+				"❌ Method does not match. Expected GET but received POST."
+			]);
+		});
+
+		it("should return failure message when query string doesn't match", () => {
+			const matcher = new RequestMatcher({
+				method: "GET",
+				url: `${BASE_URL}/users`,
+				query: { sort: "asc" }
+			});
+
+			const request = {
+				method: "GET",
+				url: `${BASE_URL}/users`,
+				query: { sort: "desc" }
+			};
+
+			const result = matcher.traceMatches(request);
+			assert.strictEqual(result.matches, false);
+			assert.deepStrictEqual(result.messages, [
+				"✅ URL matches.",
+				"✅ Method matches: GET.",
+				"❌ Query string does not match. Expected sort=asc but received sort=desc."
+			]);
+		});
+
+		it("should return failure message when body doesn't match", () => {
+			const matcher = new RequestMatcher({
+				method: "POST",
+				url: `${BASE_URL}/users`,
+				body: { name: "John" }
+			});
+
+			const request = {
+				method: "POST",
+				url: `${BASE_URL}/users`,
+				headers: {},
+				body: { name: "Jane" }
+			};
+
+			const result = matcher.traceMatches(request);
+			assert.strictEqual(result.matches, false);
+			assert.deepStrictEqual(result.messages, [
+				"✅ URL matches.",
+				"✅ Method matches: POST.",
+				"✅ Headers match.",
+				'❌ Body does not match. Expected {"name":"John"} but received {"name":"Jane"}.'
+			]);
+		});
+
+		it("should return failure message when headers don't match", () => {
+			const matcher = new RequestMatcher({
+				method: "GET",
+				url: `${BASE_URL}/users`,
+				headers: { "content-type": "application/json" }
+			});
+
+			const request = {
+				method: "GET",
+				url: `${BASE_URL}/users`,
+				headers: { "content-type": "text/plain" }
+			};
+
+			const result = matcher.traceMatches(request);
+			assert.strictEqual(result.matches, false);
+			assert.deepStrictEqual(result.messages, [
+				"✅ URL matches.",
+				"✅ Method matches: GET.",
+				"❌ Headers do not match. Expected content-type=application/json but received content-type=text/plain."
+			]);
+		});
+
+		it("should return correct URL params when URL matches", () => {
+			const matcher = new RequestMatcher({
+				method: "GET",
+				url: `${BASE_URL}/users/:id/posts/:postId`
+			});
+
+			const request = {
+				method: "GET",
+				url: `${BASE_URL}/users/123/posts/456`,
+				headers: {}
+			};
+
+			const result = matcher.traceMatches(request);
+			assert.deepStrictEqual(result.params, {
+				id: "123",
+				postId: "456"
+			});
+		});
+
+		it("should return empty params object when URL doesn't match", () => {
+			const matcher = new RequestMatcher({
+				method: "GET",
+				url: `${BASE_URL}/users/:id`
+			});
+
+			const request = {
+				method: "GET",
+				url: `${BASE_URL}/posts/123`,
+				headers: {}
+			};
+
+			const result = matcher.traceMatches(request);
+			assert.deepStrictEqual(result.params, {});
+		});
+
+		it("should return correct query params when URL contains query string", () => {
+			const matcher = new RequestMatcher({
+				method: "GET",
+				url: `${BASE_URL}/users`
+			});
+
+			const request = {
+				method: "GET",
+				url: `${BASE_URL}/users?sort=asc&limit=10`,
+				headers: {}
+			};
+
+			const result = matcher.traceMatches(request);
+			assert.strictEqual(result.query.get("sort"), "asc");
+			assert.strictEqual(result.query.get("limit"), "10");
+		});
+
+		it("should return empty query params when URL has no query string", () => {
+			const matcher = new RequestMatcher({
+				method: "GET",
+				url: `${BASE_URL}/users`
+			});
+
+			const request = {
+				method: "GET",
+				url: `${BASE_URL}/users`,
+				headers: {}
+			};
+
+			const result = matcher.traceMatches(request);
+			assert.strictEqual([...result.query.entries()].length, 0);
+		});
+
+		it("should return both params and query when URL contains both", () => {
+			const matcher = new RequestMatcher({
+				method: "GET",
+				url: `${BASE_URL}/users/:id/posts/:postId`
+			});
+
+			const request = {
+				method: "GET",
+				url: `${BASE_URL}/users/123/posts/456?sort=asc&limit=10`,
+				headers: {}
+			};
+
+			const result = matcher.traceMatches(request);
+			assert.deepStrictEqual(result.params, {
+				id: "123",
+				postId: "456"
+			});
+			assert.strictEqual(result.query.get("sort"), "asc");
+			assert.strictEqual(result.query.get("limit"), "10");
+		});
+
+	});
 });

@@ -133,6 +133,26 @@ function assertValidResponsePattern(responsePattern) {
 }
 
 /**
+ * Parses cookies from a Cookie header value
+ * @param {string|null} cookieHeader The Cookie header value
+ * @returns {Map<string,string>} A map of cookie names to values
+ */
+function parseCookies(cookieHeader) {
+    const cookies = new Map();
+    
+    if (!cookieHeader) {
+        return cookies;
+    }
+
+	cookieHeader.split(";").forEach(cookie => {
+		const [name, value] = cookie.trim().split("=");
+		cookies.set(decodeURIComponent(name), decodeURIComponent(value));
+	});
+
+    return cookies;
+}
+
+/**
  * Represents a route that the server can respond to.
  */
 export class Route {
@@ -209,8 +229,19 @@ export class Route {
 	 * @returns {Promise<Response>} The response to return.
 	 */
 	async createResponse(request, PreferredResponse) {
+		const requestMatch = this.#matcher.traceMatches({
+            method: request.method,
+            url: request.url,
+            headers: Object.fromEntries([...request.headers.entries()]),
+        });
+        
+        const cookies = parseCookies(request.headers.get('cookie'));
+        const response = await this.#createResponse(request, {
+			cookies,
+			params: requestMatch.params,
+			query: requestMatch.query,
+		});
 		
-		const response = await this.#createResponse(request);
 		const { body, delay, ...init } = typeof response === "number" ? { status: response } : response;
 		
 		if (!init.status) {

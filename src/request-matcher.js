@@ -3,7 +3,7 @@
  * @author Nicholas C. Zakas
  */
 
-/* globals FormData, URLPattern */
+/* globals FormData, URLPattern, URLSearchParams */
 
 //-----------------------------------------------------------------------------
 // Imports
@@ -117,32 +117,38 @@ export class RequestMatcher {
 	 * Checks if the request matches the matcher. Traces all of the details to help
 	 * with debugging.
 	 * @param {RequestPattern} request The request to check.
-	 * @returns {{matches:boolean, messages:string[]}} True if the request matches, false if not.
+	 * @returns {{matches:boolean, messages:string[], params:Record<string, string|undefined>, query:URLSearchParams}} True if the request matches, false if not.
 	 */
 	traceMatches(request) {
+		
 		/*
 		 * Check the URL first. This is helpful for tracing when requests don't match
 		 * because people more typically get the method wrong rather than the URL.
 		 */
-		// then check the URL
 		const urlMatch = this.#pattern.exec(request.url);
 		if (!urlMatch) {
 			return {
 				matches: false,
 				messages: ["❌ URL does not match."],
+				params: {},
+				query: new URLSearchParams(),
 			};
 		}
 
 		const messages = ["✅ URL matches."];
+		const params = urlMatch.pathname.groups;
+		const query = new URL(request.url).searchParams;
 
-		// first check the method
+		// Method check
 		if (request.method.toLowerCase() !== this.#method.toLowerCase()) {
 			return {
 				matches: false,
 				messages: [
 					...messages,
 					`❌ Method does not match. Expected ${this.#method.toUpperCase()} but received ${request.method.toUpperCase()}.`,
-				],
+					],
+				params,
+				query,
 			};
 		}
 
@@ -161,6 +167,8 @@ export class RequestMatcher {
 						...messages,
 						"❌ Query string does not match. Expected query string but received none.",
 					],
+					params,
+					query,
 				};
 			}
 
@@ -172,6 +180,8 @@ export class RequestMatcher {
 							...messages,
 							`❌ Query string does not match. Expected ${key}=${value} but received ${key}=${actualQuery[key]}.`,
 						],
+						params,
+						query,
 					};
 				}
 			}
@@ -190,6 +200,8 @@ export class RequestMatcher {
 						...messages,
 						"❌ URL parameters do not match. Expected parameters but received none.",
 					],
+					params,
+					query,
 				};
 			}
 
@@ -201,6 +213,8 @@ export class RequestMatcher {
 							...messages,
 							`❌ URL parameters do not match. Expected ${key}=${value} but received ${key}=${actualParams[key]}.`,
 						],
+						params,
+						query,
 					};
 				}
 			}
@@ -228,6 +242,8 @@ export class RequestMatcher {
 							...messages,
 							`❌ Headers do not match. Expected ${key}=${value} but received ${key}=${actualValue ? actualValue[1] : "none"}.`,
 						],
+						params,
+						query,
 					};
 				}
 			}
@@ -245,6 +261,8 @@ export class RequestMatcher {
 						...messages,
 						"❌ Body does not match. Expected body but received none.",
 					],
+					params,
+					query,
 				};
 			}
 
@@ -256,6 +274,8 @@ export class RequestMatcher {
 							...messages,
 							`❌ Body does not match. Expected ${this.#body} but received ${request.body}`,
 						],
+						params,
+						query,
 					};
 				}
 
@@ -268,6 +288,8 @@ export class RequestMatcher {
 							...messages,
 							"❌ Body does not match. Expected FormData but received none.",
 						],
+						params,
+						query,
 					};
 				}
 
@@ -279,6 +301,8 @@ export class RequestMatcher {
 								...messages,
 								`❌ Body does not match. Expected ${key}=${value} but received ${key}=${request.body.get(key)}.`,
 							],
+							params,
+							query,
 						};
 					}
 				}
@@ -292,6 +316,8 @@ export class RequestMatcher {
 							...messages,
 							`❌ Body does not match. Expected ArrayBuffer but received ${request.body.constructor.name}.`,
 						],
+						params,
+						query,
 					};
 				}
 
@@ -303,6 +329,8 @@ export class RequestMatcher {
 							...messages,
 							`❌ Body does not match. Expected array buffer byte length ${this.#body.byteLength} but received ${request.body.byteLength}`,
 						],
+						params,
+						query,
 					};
 				}
 
@@ -318,6 +346,8 @@ export class RequestMatcher {
 								...messages,
 								`❌ Body does not match. Expected byte ${i} to be ${expectedBody[i]} but received ${actualBody[i]}.`,
 							],
+							params,
+							query,
 						};
 					}
 				}
@@ -332,6 +362,8 @@ export class RequestMatcher {
 							...messages,
 							"❌ Body does not match. Expected object but received none.",
 						],
+						params,
+						query,
 					};
 				}
 				
@@ -343,6 +375,8 @@ export class RequestMatcher {
 							...messages,
 							`❌ Body does not match. Expected ${JSON.stringify(this.#body)} but received ${JSON.stringify(request.body)}.`,
 						],
+						params,
+						query,
 					};
 				}
 
@@ -353,6 +387,8 @@ export class RequestMatcher {
 		return {
 			matches: true,
 			messages,
+			params,
+			query,
 		};
 	}
 

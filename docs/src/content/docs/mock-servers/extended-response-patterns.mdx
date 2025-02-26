@@ -161,3 +161,43 @@ server.get("/users/123", async request => {
 ```
 
 This route will respond to any GET request to `/users/123` with a status code of 200 and a JSON response body containing an `id` and `name` property, but it will wait for 1 second before returning the response. You can use this to simulate network latency or other asynchronous behavior when the `delay` key is not sufficient.
+
+### Access request context in response creators
+
+Response creator functions receive a second argument that provides access to additional request context information. This object contains:
+
+- `cookies` - A `Map` containing any cookies sent with the request
+- `params` - An object containing any URL parameters matched in the route pattern
+- `query` - A `URLSearchParams` object containing any query string parameters
+
+Here's an example showing how to use this context:
+
+```js
+import { MockServer } from "mentoss";
+
+const server = new MockServer("https://api.example.com");
+
+// Match URLs like /users/123
+server.get("/users/:id", (request, { cookies, params, query }) => {
+    
+    // Access cookies
+    const sessionId = cookies.get("sessionId");
+    
+    // Access URL parameters
+    const userId = params.id;
+    
+    // Access query string parameters
+	const format = query.get("format") ?? "json";
+    
+    return {
+        status: 200,
+        body: {
+            userId,
+            sessionId,
+            format
+        }
+    };
+});
+```
+
+The context argument makes it easy to implement realistic API behaviors that depend on these request details.
