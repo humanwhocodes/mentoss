@@ -245,6 +245,20 @@ function isCorsSafeListedRequestHeader(name, value) {
 	
 }
 
+/**
+ * Checks if a string is a valid origin.
+ * @param {string} origin The origin to validate.
+ * @returns {boolean} `true` if the origin is valid, `false` otherwise.
+*/
+function isValidOrigin(origin) {
+	try {
+		new URL(origin);
+		return true;
+	} catch {
+		return false;
+	}
+}
+
 //-----------------------------------------------------------------------------
 // Exports
 //-----------------------------------------------------------------------------
@@ -325,14 +339,15 @@ export function assertCorsResponse(response, origin, isPreflight = false) {
 	
 	if (originHeader !== "*") {
 		// must be a valid origin
-		const originUrl = URL.parse(origin);
-		if (!originUrl) {
+		if (!isValidOrigin(origin)) {
 			throw new NetworkError(
 				response.url,
 				origin,
 				`The 'Access-Control-Allow-Origin' header contains the invalid value '${originHeader}'.`,
 			);
 		}
+
+		const originUrl = new URL(origin);
 		
 		if (originUrl.origin !== originHeader) {
 			throw new NetworkError(
