@@ -2,14 +2,14 @@
  * @fileoverview Tests for the CORS utilities.
  * @autor Nicholas C. Zakas
  */
-/* global Request, Headers */
+/* global Request, Headers, Response */
 
 //-----------------------------------------------------------------------------
 // Imports
 //-----------------------------------------------------------------------------
 
 import assert from "node:assert";
-import { isCorsSimpleRequest, getUnsafeHeaders } from "../src/cors.js";
+import { isCorsSimpleRequest, getUnsafeHeaders, assertCorsResponse } from "../src/cors.js";
 
 //-----------------------------------------------------------------------------
 // Tests
@@ -249,6 +249,73 @@ describe("http", () => {
 				getUnsafeHeaders(request),
 				["authorization", "content-type", "range", "x-custom-header"]
 			);
+		});
+	});
+
+	describe("assertCorsResponse()", () => {
+		it("should not throw when Access-Control-Allow-Origin is *", () => {
+			const headers = new Headers({
+				"Access-Control-Allow-Origin": "*"
+			});
+			const response = new Response(null, { headers });
+			
+			assert.doesNotThrow(() => {
+				assertCorsResponse(response, "https://example.com");
+			});
+		});
+
+		it("should not throw when Access-Control-Allow-Origin matches origin", () => {
+			const origin = "https://example.com";
+			const headers = new Headers({
+				"Access-Control-Allow-Origin": origin
+			});
+			const response = new Response(null, { headers });
+			
+			assert.doesNotThrow(() => {
+				assertCorsResponse(response, origin);
+			});
+		});
+
+		it("should throw when Access-Control-Allow-Origin header is missing", () => {
+			const response = new Response();
+			const origin = "https://example.com";
+			
+			assert.throws(() => {
+				assertCorsResponse(response, origin);
+			}, {
+				name: "CorsError",
+				message: `Access to fetch at '${response.url}' from origin '${origin}' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.`
+			});
+		});
+
+		it("should throw when Access-Control-Allow-Origin doesn't match origin", () => {
+			const headers = new Headers({
+				"Access-Control-Allow-Origin": "https://example.com"
+			});
+			const response = new Response(null, { headers });
+			const origin = "https://other.com";
+			
+			assert.throws(() => {
+				assertCorsResponse(response, origin);
+			}, {
+				name: "CorsError",
+				message: `Access to fetch at '${response.url}' from origin '${origin}' has been blocked by CORS policy: The 'Access-Control-Allow-Origin' header has a value 'https://example.com' that is not equal to the supplied origin.`
+			});
+		});
+
+		it("should throw when Access-Control-Allow-Origin contains multiple values", () => {
+			const headers = new Headers({
+				"Access-Control-Allow-Origin": "https://example.com, https://other.com"
+			});
+			const response = new Response(null, { headers });
+			const origin = "https://example.com";
+			
+			assert.throws(() => {
+				assertCorsResponse(response, origin);
+			}, {
+				name: "CorsError",
+				message: `Access to fetch at '${response.url}' from origin '${origin}' has been blocked by CORS policy: The 'Access-Control-Allow-Origin' header contains multiple values 'https://example.com, https://other.com', but only one is allowed.`
+			});
 		});
 	});
 });

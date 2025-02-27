@@ -305,19 +305,40 @@ export function assertCorsResponse(response, origin) {
 	const originHeader = response.headers.get(CORS_ALLOW_ORIGIN);
 
 	if (!originHeader) {
-		throw new CorsPreflightError(
+		throw new CorsError(
 			response.url,
 			origin,
 			"No 'Access-Control-Allow-Origin' header is present on the requested resource.",
 		);
 	}
-
-	if (originHeader !== "*" && originHeader !== origin) {
+	
+	// multiple values are not allowed
+	if (originHeader.includes(",")) {
 		throw new CorsError(
 			response.url,
 			origin,
-			`The 'Access-Control-Allow-Origin' header has a value '${originHeader}' that is not equal to the supplied origin.`,
+			`The 'Access-Control-Allow-Origin' header contains multiple values '${originHeader}', but only one is allowed.`,
 		);
+	}
+	
+	if (originHeader !== "*") {
+		// must be a valid origin
+		const originUrl = URL.parse(origin);
+		if (!originUrl) {
+			throw new CorsError(
+				response.url,
+				origin,
+				`The 'Access-Control-Allow-Origin' header contains the invalid value '${originHeader}'.`,
+			);
+		}
+		
+		if (originUrl.origin !== originHeader) {
+			throw new CorsError(
+				response.url,
+				origin,
+				`The 'Access-Control-Allow-Origin' header has a value '${originHeader}' that is not equal to the supplied origin.`,
+			);
+		}
 	}
 }
 
