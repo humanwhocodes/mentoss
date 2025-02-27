@@ -298,14 +298,16 @@ export class CorsPreflightError extends CorsError {
  * Asserts that the response has the correct CORS headers.
  * @param {Response} response The response to check.
  * @param {string} origin The origin to check against.
+ * @param {boolean} isPreflight `true` if this is a preflight request, `false` otherwise.
  * @returns {void}
  * @throws {Error} When the response doesn't have the correct CORS headers.
  */
-export function assertCorsResponse(response, origin) {
+export function assertCorsResponse(response, origin, isPreflight = false) {
 	const originHeader = response.headers.get(CORS_ALLOW_ORIGIN);
+	const NetworkError = isPreflight ? CorsPreflightError : CorsError;
 
 	if (!originHeader) {
-		throw new CorsError(
+		throw new NetworkError(
 			response.url,
 			origin,
 			"No 'Access-Control-Allow-Origin' header is present on the requested resource.",
@@ -314,7 +316,7 @@ export function assertCorsResponse(response, origin) {
 	
 	// multiple values are not allowed
 	if (originHeader.includes(",")) {
-		throw new CorsError(
+		throw new NetworkError(
 			response.url,
 			origin,
 			`The 'Access-Control-Allow-Origin' header contains multiple values '${originHeader}', but only one is allowed.`,
@@ -325,7 +327,7 @@ export function assertCorsResponse(response, origin) {
 		// must be a valid origin
 		const originUrl = URL.parse(origin);
 		if (!originUrl) {
-			throw new CorsError(
+			throw new NetworkError(
 				response.url,
 				origin,
 				`The 'Access-Control-Allow-Origin' header contains the invalid value '${originHeader}'.`,
@@ -333,7 +335,7 @@ export function assertCorsResponse(response, origin) {
 		}
 		
 		if (originUrl.origin !== originHeader) {
-			throw new CorsError(
+			throw new NetworkError(
 				response.url,
 				origin,
 				`The 'Access-Control-Allow-Origin' header has a value '${originHeader}' that is not equal to the supplied origin.`,

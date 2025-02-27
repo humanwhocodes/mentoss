@@ -317,5 +317,32 @@ describe("http", () => {
 				message: `Access to fetch at '${response.url}' from origin '${origin}' has been blocked by CORS policy: The 'Access-Control-Allow-Origin' header contains multiple values 'https://example.com, https://other.com', but only one is allowed.`
 			});
 		});
+
+		it("should throw CorsPreflightError when Access-Control-Allow-Origin header is missing in preflight", () => {
+			const response = new Response();
+			const origin = "https://example.com";
+			
+			assert.throws(() => {
+				assertCorsResponse(response, origin, true);
+			}, {
+				name: "CorsPreflightError",
+				message: `Access to fetch at '${response.url}' from origin '${origin}' has been blocked by CORS policy: Response to preflight request doesn't pass access control check: No 'Access-Control-Allow-Origin' header is present on the requested resource.`
+			});
+		});
+
+		it("should throw CorsPreflightError when Access-Control-Allow-Origin doesn't match origin in preflight", () => {
+			const headers = new Headers({
+				"Access-Control-Allow-Origin": "https://example.com"
+			});
+			const response = new Response(null, { headers });
+			const origin = "https://other.com";
+			
+			assert.throws(() => {
+				assertCorsResponse(response, origin, true);
+			}, {
+				name: "CorsPreflightError",
+				message: `Access to fetch at '${response.url}' from origin '${origin}' has been blocked by CORS policy: Response to preflight request doesn't pass access control check: The 'Access-Control-Allow-Origin' header has a value 'https://example.com' that is not equal to the supplied origin.`
+			});
+		});
 	});
 });
