@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.7.0](https://github.com/humanwhocodes/mentoss/compare/mentoss-v0.6.0...mentoss-v0.7.0) (2025-02-27)
+
+
+### Features
+
+* Implement fetch with mode: 'same-origin' ([9add18f](https://github.com/humanwhocodes/mentoss/commit/9add18f0da1a0f51709e841e41bbc10ba539a978))
+* Implement fetch with mode: "same-origin" ([#65](https://github.com/humanwhocodes/mentoss/issues/65)) ([9add18f](https://github.com/humanwhocodes/mentoss/commit/9add18f0da1a0f51709e841e41bbc10ba539a978))
+* Pass more detail to response creator functions ([#67](https://github.com/humanwhocodes/mentoss/issues/67)) ([dc78d00](https://github.com/humanwhocodes/mentoss/commit/dc78d004ebccd10b2bf6886a1ce84500051b1d80))
+
+
+### Bug Fixes
+
+* CORS errors should be TypeErrors ([#70](https://github.com/humanwhocodes/mentoss/issues/70)) ([98a46ba](https://github.com/humanwhocodes/mentoss/commit/98a46bafb2210126b0449f9ed60d28b1d2e334b4))
+* Ensure Access-Control-Allow-Origin header contains valid origin ([#68](https://github.com/humanwhocodes/mentoss/issues/68)) ([0e529ee](https://github.com/humanwhocodes/mentoss/commit/0e529ee723628a551ef505c704cc154a67ebcd7a))
+
 ## [0.6.0](https://github.com/humanwhocodes/mentoss/compare/mentoss-v0.5.2...mentoss-v0.6.0) (2025-02-21)
 
 
