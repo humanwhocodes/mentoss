@@ -461,7 +461,7 @@ export class FetchMocker {
 			);
 		}
 
-		assertCorsResponse(preflightResponse, this.#baseUrl.origin);
+		assertCorsResponse(preflightResponse, this.#baseUrl.origin, true);
 
 		// create the preflight data
 		preflightData = new CorsPreflightData(preflightResponse.headers);
