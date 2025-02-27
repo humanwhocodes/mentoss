@@ -264,48 +264,31 @@ function isValidOrigin(origin) {
 //-----------------------------------------------------------------------------
 
 /**
- * Represents an error that occurs when a CORS request is blocked.
+ * Creates a CORS error object.
+ * @param {string} requestUrl The URL of the request.
+ * @param {string} origin The origin of the client making the request.
+ * @param {string} message The error message.
+ * @returns {TypeError} A TypeError with CORS error message.
  */
-export class CorsError extends Error {
-	/**
-	 * The name of the error.
-	 * @type {string}
-	 */
-	name = "CorsError";
-
-	/**
-	 * Creates a new instance.
-	 * @param {string} requestUrl The URL of the request.
-	 * @param {string} origin The origin of the client making the request.
-	 * @param {string} message The error message.
-	 */
-	constructor(requestUrl, origin, message) {
-		super(
-			`Access to fetch at '${requestUrl}' from origin '${origin}' has been blocked by CORS policy: ${message}`,
-		);
-	}
+export function createCorsError(requestUrl, origin, message) {
+	return new TypeError(
+		`Access to fetch at '${requestUrl}' from origin '${origin}' has been blocked by CORS policy: ${message}`
+	);
 }
 
 /**
- * Represents an error that occurs when a CORS preflight request fails.
+ * Creates a CORS preflight error object.
+ * @param {string} requestUrl The URL of the request.
+ * @param {string} origin The origin of the client making the request.
+ * @param {string} message The error message.
+ * @returns {TypeError} A TypeError with CORS preflight error message.
  */
-export class CorsPreflightError extends CorsError {
-	
-	/**
-	 * The name of the error.
-	 * @type {string}
-	 */
-	name = "CorsPreflightError";
-	
-	/**
-	 * Creates a new instance.
-	 * @param {string} requestUrl The URL of the request.
-	 * @param {string} origin The origin of the client making the request.
-	 * @param {string} message The error message.
-	 */
-	constructor(requestUrl, origin, message) {
-		super(requestUrl, origin, `Response to preflight request doesn't pass access control check: ${message}`);
-	}
+export function createCorsPreflightError(requestUrl, origin, message) {
+	return createCorsError(
+		requestUrl,
+		origin,
+		`Response to preflight request doesn't pass access control check: ${message}`
+	);
 }
 
 /**
@@ -318,42 +301,42 @@ export class CorsPreflightError extends CorsError {
  */
 export function assertCorsResponse(response, origin, isPreflight = false) {
 	const originHeader = response.headers.get(CORS_ALLOW_ORIGIN);
-	const NetworkError = isPreflight ? CorsPreflightError : CorsError;
+	const errorCreator = isPreflight ? createCorsPreflightError : createCorsError;
 
 	if (!originHeader) {
-		throw new NetworkError(
+		throw errorCreator(
 			response.url,
 			origin,
-			"No 'Access-Control-Allow-Origin' header is present on the requested resource.",
+			"No 'Access-Control-Allow-Origin' header is present on the requested resource."
 		);
 	}
-	
+
 	// multiple values are not allowed
 	if (originHeader.includes(",")) {
-		throw new NetworkError(
+		throw errorCreator(
 			response.url,
 			origin,
-			`The 'Access-Control-Allow-Origin' header contains multiple values '${originHeader}', but only one is allowed.`,
+			`The 'Access-Control-Allow-Origin' header contains multiple values '${originHeader}', but only one is allowed.`
 		);
 	}
-	
+
 	if (originHeader !== "*") {
 		// must be a valid origin
 		if (!isValidOrigin(origin)) {
-			throw new NetworkError(
+			throw errorCreator(
 				response.url,
 				origin,
-				`The 'Access-Control-Allow-Origin' header contains the invalid value '${originHeader}'.`,
+				`The 'Access-Control-Allow-Origin' header contains the invalid value '${originHeader}'.`
 			);
 		}
 
 		const originUrl = new URL(origin);
 		
 		if (originUrl.origin !== originHeader) {
-			throw new NetworkError(
+			throw errorCreator(
 				response.url,
 				origin,
-				`The 'Access-Control-Allow-Origin' header has a value '${originHeader}' that is not equal to the supplied origin.`,
+				`The 'Access-Control-Allow-Origin' header has a value '${originHeader}' that is not equal to the supplied origin.`
 			);
 		}
 	}
@@ -371,50 +354,50 @@ export function assertCorsCredentials(response, origin) {
 	const allowCredentials = response.headers.get(CORS_ALLOW_CREDENTIALS);
 
 	if (!allowCredentials) {
-		throw new CorsError(
+		throw createCorsError(
 			response.url,
 			origin,
-			"No 'Access-Control-Allow-Credentials' header is present on the requested resource.",
+			"No 'Access-Control-Allow-Credentials' header is present on the requested resource."
 		);
 	}
 
 	if (allowCredentials !== "true") {
-		throw new CorsError(
+		throw createCorsError(
 			response.url,
 			origin,
-			"The 'Access-Control-Allow-Credentials' header has a value that is not 'true'.",
+			"The 'Access-Control-Allow-Credentials' header has a value that is not 'true'."
 		);
 	}
 
 	if (response.headers.get(CORS_ALLOW_ORIGIN) === "*") {
-		throw new CorsError(
+		throw createCorsError(
 			response.url,
 			origin,
-			"The 'Access-Control-Allow-Origin' header has a value of '*' which is not allowed when the 'Access-Control-Allow-Credentials' header is 'true'.",
+			"The 'Access-Control-Allow-Origin' header has a value of '*' which is not allowed when the 'Access-Control-Allow-Credentials' header is 'true'."
 		);
 	}
 
 	if (response.headers.get(CORS_ALLOW_HEADERS) === "*") {
-		throw new CorsError(
+		throw createCorsError(
 			response.url,
 			origin,
-			"The 'Access-Control-Allow-Headers' header has a value of '*' which is not allowed when the 'Access-Control-Allow-Credentials' header is 'true'.",
+			"The 'Access-Control-Allow-Headers' header has a value of '*' which is not allowed when the 'Access-Control-Allow-Credentials' header is 'true'."
 		);
 	}
 
 	if (response.headers.get(CORS_ALLOW_METHODS) === "*") {
-		throw new CorsError(
+		throw createCorsError(
 			response.url,
 			origin,
-			"The 'Access-Control-Allow-Methods' header has a value of '*' which is not allowed when the 'Access-Control-Allow-Credentials' header is 'true'.",
+			"The 'Access-Control-Allow-Methods' header has a value of '*' which is not allowed when the 'Access-Control-Allow-Credentials' header is 'true'."
 		);
 	}
 
 	if (response.headers.get(CORS_EXPOSE_HEADERS) === "*") {
-		throw new CorsError(
+		throw createCorsError(
 			response.url,
 			origin,
-			"The 'Access-Control-Expose-Headers' header has a value of '*' which is not allowed when the 'Access-Control-Allow-Credentials' header is 'true'.",
+			"The 'Access-Control-Expose-Headers' header has a value of '*' which is not allowed when the 'Access-Control-Allow-Credentials' header is 'true'."
 		);
 	}
 }
@@ -545,10 +528,10 @@ export function isCorsSimpleRequest(request) {
 export function validateCorsRequest(request, origin) {
 	// check the method
 	if (forbiddenMethods.has(request.method)) {
-		throw new CorsError(
+		throw createCorsError(
 			request.url,
 			origin,
-			`Method ${request.method} is not allowed.`,
+			`Method ${request.method} is not allowed.`
 		);
 	}
 
@@ -558,10 +541,10 @@ export function validateCorsRequest(request, origin) {
 		const value = /** @type {string} */ (request.headers.get(header));
 		
 		if (isForbiddenRequestHeader(header, value)) {
-			throw new CorsError(
+			throw createCorsError(
 				request.url,
 				origin,
-				`Header ${header} is not allowed.`,
+				`Header ${header} is not allowed.`
 			);
 		}
 	}
@@ -688,10 +671,10 @@ export class CorsPreflightData {
 			!safeMethods.has(method) &&
 			!this.allowedMethods.has(method)
 		) {
-			throw new CorsError(
+			throw createCorsError(
 				request.url,
 				origin,
-				`Method ${method} is not allowed.`,
+				`Method ${method} is not allowed.`
 			);
 		}
 	}
@@ -719,18 +702,18 @@ export class CorsPreflightData {
 				header === "authorization" &&
 				!this.allowedHeaders.has(header)
 			) {
-				throw new CorsError(
+				throw createCorsError(
 					request.url,
 					origin,
-					`Header ${header} is not allowed.`,
+					`Header ${header} is not allowed.`
 				);
 			}
 
 			if (unsafeHeaders.has(header) && !this.allowAllHeaders && !this.allowedHeaders.has(header)) {
-				throw new CorsError(
+				throw createCorsError(
 					request.url,
 					origin,
-					`Header ${header} is not allowed.`,
+					`Header ${header} is not allowed.`
 				);
 			}
 		}

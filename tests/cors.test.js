@@ -9,7 +9,7 @@
 //-----------------------------------------------------------------------------
 
 import assert from "node:assert";
-import { isCorsSimpleRequest, getUnsafeHeaders, assertCorsResponse } from "../src/cors.js";
+import { isCorsSimpleRequest, getUnsafeHeaders, assertCorsResponse, createCorsError, createCorsPreflightError } from "../src/cors.js";
 
 //-----------------------------------------------------------------------------
 // Tests
@@ -276,73 +276,115 @@ describe("http", () => {
 			});
 		});
 
-		it("should throw when Access-Control-Allow-Origin header is missing", () => {
+		it("should throw TypeError when Access-Control-Allow-Origin header is missing", () => {
 			const response = new Response();
 			const origin = "https://example.com";
 			
-			assert.throws(() => {
-				assertCorsResponse(response, origin);
-			}, {
-				name: "CorsError",
-				message: `Access to fetch at '${response.url}' from origin '${origin}' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.`
-			});
+			assert.throws(
+				() => assertCorsResponse(response, origin),
+				createCorsError(
+					response.url,
+					origin,
+					"No 'Access-Control-Allow-Origin' header is present on the requested resource."
+				)
+			);
 		});
 
-		it("should throw when Access-Control-Allow-Origin doesn't match origin", () => {
+		it("should throw TypeError when Access-Control-Allow-Origin doesn't match origin", () => {
 			const headers = new Headers({
 				"Access-Control-Allow-Origin": "https://example.com"
 			});
 			const response = new Response(null, { headers });
 			const origin = "https://other.com";
 			
-			assert.throws(() => {
-				assertCorsResponse(response, origin);
-			}, {
-				name: "CorsError",
-				message: `Access to fetch at '${response.url}' from origin '${origin}' has been blocked by CORS policy: The 'Access-Control-Allow-Origin' header has a value 'https://example.com' that is not equal to the supplied origin.`
-			});
+			assert.throws(
+				() => assertCorsResponse(response, origin),
+				createCorsError(
+					response.url,
+					origin,
+					"The 'Access-Control-Allow-Origin' header has a value 'https://example.com' that is not equal to the supplied origin."
+				)
+			);
 		});
 
-		it("should throw when Access-Control-Allow-Origin contains multiple values", () => {
+		it("should throw TypeError when Access-Control-Allow-Origin contains multiple values", () => {
 			const headers = new Headers({
 				"Access-Control-Allow-Origin": "https://example.com, https://other.com"
 			});
 			const response = new Response(null, { headers });
 			const origin = "https://example.com";
 			
-			assert.throws(() => {
-				assertCorsResponse(response, origin);
-			}, {
-				name: "CorsError",
-				message: `Access to fetch at '${response.url}' from origin '${origin}' has been blocked by CORS policy: The 'Access-Control-Allow-Origin' header contains multiple values 'https://example.com, https://other.com', but only one is allowed.`
-			});
+			assert.throws(
+				() => assertCorsResponse(response, origin),
+				createCorsError(
+					response.url,
+					origin,
+					"The 'Access-Control-Allow-Origin' header contains multiple values 'https://example.com, https://other.com', but only one is allowed."
+				)
+			);
 		});
 
-		it("should throw CorsPreflightError when Access-Control-Allow-Origin header is missing in preflight", () => {
+		it("should throw TypeError when Access-Control-Allow-Origin header is missing in preflight", () => {
 			const response = new Response();
 			const origin = "https://example.com";
 			
-			assert.throws(() => {
-				assertCorsResponse(response, origin, true);
-			}, {
-				name: "CorsPreflightError",
-				message: `Access to fetch at '${response.url}' from origin '${origin}' has been blocked by CORS policy: Response to preflight request doesn't pass access control check: No 'Access-Control-Allow-Origin' header is present on the requested resource.`
-			});
+			assert.throws(
+				() => assertCorsResponse(response, origin, true),
+				createCorsPreflightError(
+					response.url,
+					origin,
+					"No 'Access-Control-Allow-Origin' header is present on the requested resource."
+				)
+			);
 		});
 
-		it("should throw CorsPreflightError when Access-Control-Allow-Origin doesn't match origin in preflight", () => {
+		it("should throw TypeError when Access-Control-Allow-Origin doesn't match origin in preflight", () => {
 			const headers = new Headers({
 				"Access-Control-Allow-Origin": "https://example.com"
 			});
 			const response = new Response(null, { headers });
 			const origin = "https://other.com";
 			
-			assert.throws(() => {
-				assertCorsResponse(response, origin, true);
-			}, {
-				name: "CorsPreflightError",
-				message: `Access to fetch at '${response.url}' from origin '${origin}' has been blocked by CORS policy: Response to preflight request doesn't pass access control check: The 'Access-Control-Allow-Origin' header has a value 'https://example.com' that is not equal to the supplied origin.`
-			});
+			assert.throws(
+				() => assertCorsResponse(response, origin, true),
+				createCorsPreflightError(
+					response.url,
+					origin,
+					"The 'Access-Control-Allow-Origin' header has a value 'https://example.com' that is not equal to the supplied origin."
+				)
+			);
+		});
+	});
+
+	describe("createCorsError()", () => {
+		it("should create TypeError with correct message", () => {
+			const error = createCorsError(
+				"https://example.com",
+				"https://other.com",
+				"Test message"
+			);
+			
+			assert.strictEqual(error instanceof TypeError, true);
+			assert.strictEqual(
+				error.message,
+				"Access to fetch at 'https://example.com' from origin 'https://other.com' has been blocked by CORS policy: Test message"
+			);
+		});
+	});
+
+	describe("createCorsPreflightError()", () => {
+		it("should create TypeError with correct preflight message", () => {
+			const error = createCorsPreflightError(
+				"https://example.com",
+				"https://other.com",
+				"Test message"
+			);
+			
+			assert.strictEqual(error instanceof TypeError, true);
+			assert.strictEqual(
+				error.message,
+				"Access to fetch at 'https://example.com' from origin 'https://other.com' has been blocked by CORS policy: Response to preflight request doesn't pass access control check: Test message"
+			);
 		});
 	});
 });
