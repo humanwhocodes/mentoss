@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.1](https://github.com/humanwhocodes/mentoss/compare/mentoss-v0.7.0...mentoss-v0.7.1) (2025-03-03)
+
+
+### Bug Fixes
+
+* Ensure baseUrl is properly applied to route matching ([#71](https://github.com/humanwhocodes/mentoss/issues/71)) ([96d103c](https://github.com/humanwhocodes/mentoss/commit/96d103cea65dfa1bec4c74f23d282ec6185856c1))
+
 ## [0.7.0](https://github.com/humanwhocodes/mentoss/compare/mentoss-v0.6.0...mentoss-v0.7.0) (2025-02-27)
 
 
