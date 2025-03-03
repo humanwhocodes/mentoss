@@ -7,3 +7,4 @@
 export { MockServer } from "./mock-server.js";
 export { FetchMocker } from "./fetch-mocker.js";
 export { CookieCredentials } from "./cookie-credentials.js";
+export * from "./types.js";
