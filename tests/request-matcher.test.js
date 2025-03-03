@@ -99,6 +99,86 @@ describe("RequestMatcher", () => {
 
 			assert.strictEqual(matcher.matches(request), true);
 		});
+		
+		it("should match requests when URL pattern starts with / and baseUrl ends with /", () => {
+			const matcher = new RequestMatcher({
+				method: "GET",
+				baseUrl: `${BASE_URL}/`,
+				url: `/users/:id`,
+			});
+			
+			const request = {
+				method: "GET",
+				url: `${BASE_URL}/users/123`,
+				headers: {},
+			};
+			
+			assert.strictEqual(matcher.matches(request), true);
+		});
+		
+		it("should match requests when URL pattern starts with / and baseUrl has a path and ends with /", () => {
+			const matcher = new RequestMatcher({
+				method: "GET",
+				baseUrl: `${BASE_URL}/users/`,
+				url: `/:id`,
+			});
+
+			const request = {
+				method: "GET",
+				url: `${BASE_URL}/users/123`,
+				headers: {},
+			};
+
+			assert.strictEqual(matcher.matches(request), true);
+		});		
+
+		it("should match requests when URL pattern doesn't start with / and baseUrl has a path and ends with /", () => {
+			const matcher = new RequestMatcher({
+				method: "GET",
+				baseUrl: `${BASE_URL}/users/`,
+				url: `:id`,
+			});
+
+			const request = {
+				method: "GET",
+				url: `${BASE_URL}/users/123`,
+				headers: {},
+			};
+
+			assert.strictEqual(matcher.matches(request), true);
+		});		
+
+		it("should match requests when URL pattern starts with / and baseUrl has a path and doesn't end with /", () => {
+			const matcher = new RequestMatcher({
+				method: "GET",
+				baseUrl: `${BASE_URL}/users`,
+				url: `/:id`,
+			});
+
+			const request = {
+				method: "GET",
+				url: `${BASE_URL}/users/123`,
+				headers: {},
+			};
+
+			assert.strictEqual(matcher.matches(request), true);
+		});		
+
+		it("should match requests when URL pattern doesn't start with / and baseUrl has a path and doesn't end with /", () => {
+			const matcher = new RequestMatcher({
+				method: "GET",
+				baseUrl: `${BASE_URL}/users`,
+				url: `:id`,
+			});
+
+			const request = {
+				method: "GET",
+				url: `${BASE_URL}/users/123`,
+				headers: {},
+			};
+
+			assert.strictEqual(matcher.matches(request), true);
+		});		
 
 		it("should match requests with matching headers", () => {
 			const matcher = new RequestMatcher({
