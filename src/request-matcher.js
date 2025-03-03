@@ -106,7 +106,19 @@ export class RequestMatcher {
 		params,
 	}) {
 		this.#method = method;
-		this.#pattern = new URLPattern(url, baseUrl);
+		
+		/*
+		 * URLPattern treats a leading slash as being an absolute path from
+		 * the domain in the base URL (if present). So if the URL is /api
+		 * and the base URL is https://example.com/v1, the URLPattern will
+		 * match https://example.com/api. To avoid this, we remove the leading
+		 * slash from the URL if it's present and add a trailing slash to the
+		 * base URL if it's not present.
+		 */
+		this.#pattern = new URLPattern(
+			url.startsWith("/") ? url.slice(1) : url,
+			!baseUrl || baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`
+		);
 		this.#body = body;
 		this.#headers = headers;
 		this.#query = query;
