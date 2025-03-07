@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.0](https://github.com/humanwhocodes/mentoss/compare/mentoss-v0.7.1...mentoss-v0.8.0) (2025-03-07)
+
+
+### Features
+
+* export types for use downstream ([#73](https://github.com/humanwhocodes/mentoss/issues/73)) ([62470de](https://github.com/humanwhocodes/mentoss/commit/62470de11d185ddd2f21e0ff39e397d582f30282))
+
 ## [0.7.1](https://github.com/humanwhocodes/mentoss/compare/mentoss-v0.7.0...mentoss-v0.7.1) (2025-03-03)
 
 
