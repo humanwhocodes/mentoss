@@ -128,7 +128,7 @@ server.post(
 	{
 		url: "/users",
 		headers: {
-			"Content-Type": "application/json",
+			"Content-Type": blob.type,
 		},
 		body: {
 			name: "John Doe"
@@ -141,6 +141,9 @@ server.post(
 This route will match any POST request to `/users` that contains a `Content-Type` header with the value `application/json` and a body that matches the JSON object `{ name: "John Doe" }`. This includes requests that manually set these values as well as requests where the body is a `Blob` instance with the same content. 
 
 <Aside type="caution">
+The `type` you set for `Blob` might be changed by the runtime. For example, Bun will change `text/plain` to `text/plain;charset=utf-8`, and does the same for all text MIME types, including `application/json`. For this reason, it's best to create a `Blob` and use the `type` from the `Blob` instance itself when setting the `Content-Type` header for a request pattern intended to match a `Blob`.
+</Aside>
+<Aside type="info">
 The `body` of the request pattern cannot be a `Blob` instance. You must manually set the `Content-Type` and `body` to match what is contained in the `Blob`.
 </Aside>
 

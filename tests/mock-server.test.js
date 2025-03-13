@@ -1092,7 +1092,8 @@ describe("MockServer", () => {
 				{
 					url: "/submit",
 					headers: {
-						"content-type": "text/plain",
+						// Note: Bun always appends charset=utf-8 to the content-type header for text
+						"content-type": blob.type,
 					},
 					body: "Created"
 				},
@@ -1120,7 +1121,7 @@ describe("MockServer", () => {
 				{
 					url: "/submit",
 					headers: {
-						"content-type": "image/png"
+						"content-type": blob.type
 					},
 					body: imageData.buffer 
 				},
