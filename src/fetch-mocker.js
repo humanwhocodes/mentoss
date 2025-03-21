@@ -49,20 +49,21 @@ Full Request:
 
 ${stringifyRequest(request, body)}
 
-Partial matches:
-
 ${
-	traces
-		.map(trace => {
-			let traceMessage = `${trace.title}:`;
+	traces.length === 0
+		? "No partial matches found."
+		: "Partial matches:\n\n" +
+		  traces
+				.map(trace => {
+					let traceMessage = `${trace.title}:`;
 
-			trace.messages.forEach(message => {
-				traceMessage += `\n  ${message}`;
-			});
+					trace.messages.forEach(message => {
+						traceMessage += `\n  ${message}`;
+					});
 
-			return traceMessage;
-		})
-		.join("\n\n") || "No partial matches found."
+					return traceMessage;
+				})
+				.join("\n\n")
 }`;
 }
 

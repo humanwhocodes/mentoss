@@ -33,8 +33,6 @@ Full Request:
 
 GET https://api.example.com/goodbye
 
-Partial matches:
-
 No partial matches found.`.trim();
 
 const NO_ROUTE_MATCHED_TWO_PARTIAL_MATCHES = `
