@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.9.0](https://github.com/humanwhocodes/mentoss/compare/mentoss-v0.8.0...mentoss-v0.9.0) (2025-03-21)
+
+
+### Features
+
+* Match against already-called routes for better errors ([#84](https://github.com/humanwhocodes/mentoss/issues/84)) ([9eeb95a](https://github.com/humanwhocodes/mentoss/commit/9eeb95a561768a100c4a275180af6b13201f8e2a))
+
+
+### Bug Fixes
+
+* More succinct message when no partial matches found ([#82](https://github.com/humanwhocodes/mentoss/issues/82)) ([1f89e60](https://github.com/humanwhocodes/mentoss/commit/1f89e6016a4c77a313e07d8dce4078e6cdc6d8b3))
+
 ## [0.8.0](https://github.com/humanwhocodes/mentoss/compare/mentoss-v0.7.1...mentoss-v0.8.0) (2025-03-07)
 
 
