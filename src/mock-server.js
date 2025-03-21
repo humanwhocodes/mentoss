@@ -550,6 +550,22 @@ export class MockServer {
 			traces.push({ ...trace, title: route.toString() });
 		}
 
+		/*
+		 * If we made it here, then no route matched the request. We need to
+		 * now check if any called routes match the request and produce a trace
+		 * for each of them.
+		 */
+		const matchedRoutes = this.#matchedRoutes;
+		
+		for (let i = 0; i < matchedRoutes.length; i++) {
+			const route = matchedRoutes[i];
+			const trace = route.traceMatches(requestPattern);
+			
+			trace.messages.push("❌ Route was already called.");
+			
+			traces.push({ ...trace, title: route.toString() });
+		}
+		
 		return { response: undefined, traces };
 	}
 

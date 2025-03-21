@@ -643,6 +643,45 @@ describe("MockServer", () => {
 				"application/json",
 			);
 		});
+		
+		it("should not return a response and should return traces with multiple messages when uncalled routes don't match but a called route does match", async () => {
+			server.get("/test", { status: 200, body: "OK" });
+			server.post("/test", { status: 201, body: "Created" });
+
+			const request = createRequest({
+				method: "GET",
+				url: `${BASE_URL}/test`,
+			});
+			
+			// match the route once
+			const response1 = await server.receive(request);
+			assert.strictEqual(response1.status, 200);
+			assert.strictEqual(response1.statusText, "OK");
+
+			// now try again
+			const { response: response2, traces } = await server.traceReceive(request);
+			assert.strictEqual(response2, undefined);
+			assert.strictEqual(traces.length, 2);
+			assert.strictEqual(
+				traces[0].title,
+				"🚧 [Route: POST https://example.com/test -> 201]",
+			);
+			assert.deepStrictEqual(traces[0].messages, [
+				"✅ URL matches.",
+				"❌ Method does not match. Expected POST but received GET.",
+			]);
+			assert.strictEqual(
+				traces[1].title,
+				"🚧 [Route: GET https://example.com/test -> 200]",
+			);
+			assert.deepStrictEqual(traces[1].messages, [
+				"✅ URL matches.",
+				"✅ Method matches: GET.",
+				"✅ Headers match.",
+				"❌ Route was already called.",
+			]);
+
+		});
 	});
 
 	describe("Query Strings", () => {
