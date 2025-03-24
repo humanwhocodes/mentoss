@@ -2,7 +2,7 @@
  * @fileoverview Tests for the CORS utilities.
  * @autor Nicholas C. Zakas
  */
-/* global Request, Headers, Response */
+/* global Request, Headers, Response, ReadableStream */
 
 //-----------------------------------------------------------------------------
 // Imports
@@ -94,6 +94,21 @@ describe("http", () => {
 					headers,
 				});
 				assert.strictEqual(isCorsSimpleRequest(request), true);
+			});
+			
+			it("should return false for POST request with ReadableStream body", () => {
+				const stream = new ReadableStream({
+					start(controller) {
+						controller.enqueue(new Uint8Array([1, 2, 3]));
+						controller.close();
+					}
+				});
+				const request = new Request("https://example.com", {
+					method: "POST",
+					body: stream,
+					duplex: "half"
+				});
+				assert.strictEqual(isCorsSimpleRequest(request), false);
 			});
 		});
 

@@ -3,7 +3,7 @@
  * @author Nicholas C. Zakas
  */
 
-/* global Headers */
+/* global Headers, ReadableStream */
 
 //-----------------------------------------------------------------------------
 // Data
@@ -489,6 +489,11 @@ export function processCorsResponse(response, origin, useCorsCredentials) {
 export function isCorsSimpleRequest(request) {
 	// if it's not a simple method then it's not a simple request
 	if (!safeMethods.has(request.method)) {
+		return false;
+	}
+	
+	// ReadableStream is not allowed
+	if (request.body && request.body instanceof ReadableStream) {
 		return false;
 	}
 
