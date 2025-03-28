@@ -95,18 +95,17 @@ export function parseUrl(url) {
  * @returns {Promise<string|any|FormData|null>} The body of the request.
  */
 export async function getBody(request) {
-	
 	// first get the content type
 	const contentType = request.headers.get("content-type");
 
 	// if there's no content type, there's no body
 	if (!contentType) {
 		return Promise.resolve(null);
-	}	
-	
+	}
+
 	// next try to read the body as text to see if there's a body
 	const text = await request.clone().text();
-	
+
 	// if there's no body, return null
 	if (!text) {
 		return Promise.resolve(null);

@@ -10,7 +10,12 @@
 //-----------------------------------------------------------------------------
 
 import assert from "node:assert";
-import { forbiddenMethods, forbiddenRequestHeaders, createCorsError, createCorsPreflightError } from "../src/cors.js";
+import {
+	forbiddenMethods,
+	forbiddenRequestHeaders,
+	createCorsError,
+	createCorsPreflightError,
+} from "../src/cors.js";
 import { MockServer } from "../src/mock-server.js";
 import { FetchMocker } from "../src/fetch-mocker.js";
 import { CookieCredentials } from "../src/cookie-credentials.js";
@@ -843,8 +848,8 @@ describe("FetchMocker", () => {
 					createCorsError(
 						url.href,
 						origin,
-						"No 'Access-Control-Allow-Origin' header is present on the requested resource."
-					)
+						"No 'Access-Control-Allow-Origin' header is present on the requested resource.",
+					),
 				);
 			});
 
@@ -870,8 +875,8 @@ describe("FetchMocker", () => {
 					createCorsError(
 						url.href,
 						origin,
-						"The 'Access-Control-Allow-Origin' header has a value 'https://api.example.com' that is not equal to the supplied origin."
-					)
+						"The 'Access-Control-Allow-Origin' header has a value 'https://api.example.com' that is not equal to the supplied origin.",
+					),
 				);
 			});
 
@@ -911,7 +916,6 @@ describe("FetchMocker", () => {
 		describe("Preflighted Requests", () => {
 			describe("Access-Control-Allow-Headers", () => {
 				describe("Authorization header", () => {
-
 					it("should throw an error when the Authorization header is used", async () => {
 						const server = new MockServer(API_URL);
 						const fetchMocker = new FetchMocker({
@@ -995,11 +999,10 @@ describe("FetchMocker", () => {
 						});
 
 						assert.strictEqual(response.status, 200);
-					});	
+					});
 				});
-				
+
 				describe("Access-Control-Allow-Headers", () => {
-					
 					it("should succeed when the Foo header is used with Access-Control-Allow-Headers=Foo", async () => {
 						const server = new MockServer(API_URL);
 						const fetchMocker = new FetchMocker({
@@ -1008,14 +1011,14 @@ describe("FetchMocker", () => {
 						});
 						const url = new URL("/hello", API_URL);
 						const origin = new URL(ALT_BASE_URL).origin;
-	
+
 						server.get("/hello", {
 							status: 200,
 							headers: {
 								"Access-Control-Allow-Origin": origin,
 							},
 						});
-	
+
 						server.options("/hello", {
 							status: 200,
 							headers: {
@@ -1023,15 +1026,15 @@ describe("FetchMocker", () => {
 								"Access-Control-Allow-Headers": "Foo",
 							},
 						});
-	
+
 						const response = await fetchMocker.fetch(url, {
 							method: "GET",
 							headers: { Foo: "Bar" },
 						});
-	
+
 						assert.strictEqual(response.status, 200);
 					});
-	
+
 					it("should succeed when the Foo header is used with Access-Control-Allow-Headers=*", async () => {
 						const server = new MockServer(API_URL);
 						const fetchMocker = new FetchMocker({
@@ -1040,14 +1043,14 @@ describe("FetchMocker", () => {
 						});
 						const url = new URL("/hello", API_URL);
 						const origin = new URL(ALT_BASE_URL).origin;
-	
+
 						server.get("/hello", {
 							status: 200,
 							headers: {
 								"Access-Control-Allow-Origin": origin,
 							},
 						});
-	
+
 						server.options("/hello", {
 							status: 200,
 							headers: {
@@ -1055,19 +1058,17 @@ describe("FetchMocker", () => {
 								"Access-Control-Allow-Headers": "*",
 							},
 						});
-	
+
 						const response = await fetchMocker.fetch(url, {
 							method: "GET",
 							headers: { Foo: "Bar" },
 						});
-	
+
 						assert.strictEqual(response.status, 200);
 					});
-					
 				});
 
 				describe("Access-Control-Request-Headers", () => {
-					
 					it("should pass Access-Control-Request-Headers=content-type when a non-simple content-type is used", async () => {
 						const server = new MockServer(API_URL);
 						const fetchMocker = new FetchMocker({
@@ -1077,33 +1078,41 @@ describe("FetchMocker", () => {
 						const url = new URL("/hello", API_URL);
 						const origin = new URL(ALT_BASE_URL).origin;
 
-						server.post({
-							url: "/hello",
-							headers: {
-								"Content-type": "application/json",
+						server.post(
+							{
+								url: "/hello",
+								headers: {
+									"Content-type": "application/json",
+								},
+								body: {
+									name: "value",
+								},
 							},
-							body: {
-								name: "value",
-							}
-						}, {
-							status: 200,
-							headers: {
-								"Access-Control-Allow-Origin": origin,
+							{
+								status: 200,
+								headers: {
+									"Access-Control-Allow-Origin": origin,
+								},
 							},
-						});
+						);
 
-						server.options({
-							url: "/hello",
-							headers: {
-								"Access-Control-Request-Headers": "content-type,foo",
-							}
-						}, {
-							status: 200,
-							headers: {
-								"Access-Control-Allow-Origin": origin,
-								"Access-Control-Allow-Headers": "content-type, foo",
+						server.options(
+							{
+								url: "/hello",
+								headers: {
+									"Access-Control-Request-Headers":
+										"content-type,foo",
+								},
 							},
-						});
+							{
+								status: 200,
+								headers: {
+									"Access-Control-Allow-Origin": origin,
+									"Access-Control-Allow-Headers":
+										"content-type, foo",
+								},
+							},
+						);
 
 						const response = await fetchMocker.fetch(url, {
 							method: "POST",
@@ -1116,7 +1125,7 @@ describe("FetchMocker", () => {
 
 						assert.strictEqual(response.status, 200);
 					});
-					
+
 					it("should not pass Access-Control-Request-Headers=content-type when a simple content-type is used", async () => {
 						const server = new MockServer(API_URL);
 						const fetchMocker = new FetchMocker({
@@ -1126,18 +1135,23 @@ describe("FetchMocker", () => {
 						const url = new URL("/hello", API_URL);
 						const origin = new URL(ALT_BASE_URL).origin;
 
-						server.options({
-							url: "/hello",
-							headers: {
-								"Access-Control-Request-Headers": "content-type",
-							}
-						}, {
-							status: 200,
-							headers: {
-								"Access-Control-Allow-Origin": origin,
-								"Access-Control-Allow-Headers": "content-type",
+						server.options(
+							{
+								url: "/hello",
+								headers: {
+									"Access-Control-Request-Headers":
+										"content-type",
+								},
 							},
-						});
+							{
+								status: 200,
+								headers: {
+									"Access-Control-Allow-Origin": origin,
+									"Access-Control-Allow-Headers":
+										"content-type",
+								},
+							},
+						);
 
 						await assert.rejects(
 							fetchMocker.fetch(url, {
@@ -1145,12 +1159,12 @@ describe("FetchMocker", () => {
 								headers: {
 									"Content-type": "text/plain",
 									Foo: "Bar",
-								}
+								},
 							}),
 							/No route matched/i,
 						);
 					});
-					
+
 					it("should not pass Access-Control-Request-Headers when no non-simple headers are present", async () => {
 						const server = new MockServer(API_URL);
 						const fetchMocker = new FetchMocker({
@@ -1160,17 +1174,21 @@ describe("FetchMocker", () => {
 						const url = new URL("/hello", API_URL);
 						const origin = new URL(ALT_BASE_URL).origin;
 
-						server.options({
-							url: "/hello",
-							headers: {
-								"Access-Control-Request-Headers": "content-type",
-							}
-						}, {
-							status: 200,
-							headers: {
-								"Access-Control-Allow-Origin": origin,
+						server.options(
+							{
+								url: "/hello",
+								headers: {
+									"Access-Control-Request-Headers":
+										"content-type",
+								},
 							},
-						});
+							{
+								status: 200,
+								headers: {
+									"Access-Control-Allow-Origin": origin,
+								},
+							},
+						);
 
 						await assert.rejects(
 							fetchMocker.fetch(url, {
@@ -1215,7 +1233,7 @@ describe("FetchMocker", () => {
 						{ message: PREFLIGHT_FAILED },
 					);
 				});
-				
+
 				it("should throw an error when an unsafe content-type is used and no Access-Control-Allow-Headers header is returned", async () => {
 					const server = new MockServer(API_URL);
 					const fetchMocker = new FetchMocker({
@@ -1225,21 +1243,24 @@ describe("FetchMocker", () => {
 					const url = new URL("/hello", API_URL);
 					const origin = new URL(ALT_BASE_URL).origin;
 
-					server.post({
-						url: "/hello",
-						headers: {
-							"Content-Type": "application/json",
+					server.post(
+						{
+							url: "/hello",
+							headers: {
+								"Content-Type": "application/json",
+							},
+							body: {
+								name: "value",
+							},
 						},
-						body: {
-							name: "value",
-						}
-					}, {
-						status: 204,
-						headers: {
-							"Access-Control-Allow-Origin": origin,
+						{
+							status: 204,
+							headers: {
+								"Access-Control-Allow-Origin": origin,
+							},
 						},
-					});
-					
+					);
+
 					server.options("/hello", {
 						status: 200,
 						headers: {
@@ -1426,8 +1447,8 @@ describe("FetchMocker", () => {
 						createCorsPreflightError(
 							url.href,
 							origin,
-							"No 'Access-Control-Allow-Origin' header is present on the requested resource."
-						)
+							"No 'Access-Control-Allow-Origin' header is present on the requested resource.",
+						),
 					);
 				});
 
@@ -1455,8 +1476,8 @@ describe("FetchMocker", () => {
 						createCorsPreflightError(
 							url.href,
 							origin,
-							"The 'Access-Control-Allow-Origin' header has a value 'https://api.example.com' that is not equal to the supplied origin."
-						)
+							"The 'Access-Control-Allow-Origin' header has a value 'https://api.example.com' that is not equal to the supplied origin.",
+						),
 					);
 				});
 
@@ -2121,9 +2142,8 @@ describe("FetchMocker", () => {
 				});
 			});
 		});
-		
+
 		describe("Forbidden headers", () => {
-			
 			[...forbiddenRequestHeaders].forEach(header => {
 				it(`should throw an error when the header is ${header}`, async () => {
 					const server = new MockServer(API_URL);
@@ -2143,7 +2163,7 @@ describe("FetchMocker", () => {
 					);
 				});
 			});
-			
+
 			it("should throw an error when the header begins with sec-", async () => {
 				const server = new MockServer(API_URL);
 				const fetchMocker = new FetchMocker({
@@ -2161,7 +2181,7 @@ describe("FetchMocker", () => {
 					new RegExp("Header sec-foo is not allowed", "iu"),
 				);
 			});
-			
+
 			it("should throw an error when the header begins with proxy-", async () => {
 				const server = new MockServer(API_URL);
 				const fetchMocker = new FetchMocker({
@@ -2179,14 +2199,13 @@ describe("FetchMocker", () => {
 					new RegExp("Header proxy-foo is not allowed", "iu"),
 				);
 			});
-			
+
 			[
 				"X-Http-Method",
 				"X-Http-Method-Override",
 				"X-Method-Override",
 			].forEach(header => {
 				[...forbiddenMethods].forEach(method => {
-					
 					it(`should throw an error when the ${header} header is ${method}`, async () => {
 						const server = new MockServer(API_URL);
 						const fetchMocker = new FetchMocker({
@@ -2204,10 +2223,8 @@ describe("FetchMocker", () => {
 							new RegExp(`Header ${header} is not allowed`, "iu"),
 						);
 					});
-					
 				});
 			});
-			
 		});
 	});
 
@@ -2355,11 +2372,11 @@ describe("FetchMocker", () => {
 		it("should replace fetch on an object", () => {
 			const server = new MockServer(API_URL);
 			const fetchMocker = new FetchMocker({
-				servers: [server]
+				servers: [server],
 			});
 
 			const testObject = {
-				fetch: () => {}
+				fetch: () => {},
 			};
 			const originalFetch = testObject.fetch;
 
@@ -2373,11 +2390,11 @@ describe("FetchMocker", () => {
 		it("should replace custom property name on an object", () => {
 			const server = new MockServer(API_URL);
 			const fetchMocker = new FetchMocker({
-				servers: [server]
+				servers: [server],
 			});
 
 			const testObject = {
-				customFetch: () => {}
+				customFetch: () => {},
 			};
 			const originalFetch = testObject.customFetch;
 
@@ -2391,7 +2408,7 @@ describe("FetchMocker", () => {
 		it("should throw error when object is not an object", () => {
 			const server = new MockServer(API_URL);
 			const fetchMocker = new FetchMocker({
-				servers: [server]
+				servers: [server],
 			});
 
 			assert.throws(() => {
@@ -2402,24 +2419,24 @@ describe("FetchMocker", () => {
 		it("should restore multiple mocked properties", () => {
 			const server = new MockServer(API_URL);
 			const fetchMocker = new FetchMocker({
-						servers: [server]
+				servers: [server],
 			});
 
 			const testObject = {
-						fetch: () => {},
-						customFetch: () => {}
+				fetch: () => {},
+				customFetch: () => {},
 			};
 			const originalFetch = testObject.fetch;
 			const originalCustomFetch = testObject.customFetch;
 
 			fetchMocker.mockObject(testObject, "fetch");
 			fetchMocker.mockObject(testObject, "customFetch");
-			
+
 			assert.strictEqual(testObject.fetch, fetchMocker.fetch);
 			assert.strictEqual(testObject.customFetch, fetchMocker.fetch);
 
 			fetchMocker.unmockObject(testObject);
-			
+
 			assert.strictEqual(testObject.fetch, originalFetch);
 			assert.strictEqual(testObject.customFetch, originalCustomFetch);
 		});
@@ -2439,7 +2456,7 @@ describe("FetchMocker", () => {
 			});
 
 			const response = await fetchMocker.fetch(API_URL + "/hello", {
-				mode: "no-cors"
+				mode: "no-cors",
 			});
 
 			assert.strictEqual(response.type, "opaque");
@@ -2468,12 +2485,12 @@ describe("FetchMocker", () => {
 			await assert.rejects(
 				fetchMocker.fetch(API_URL + "/hello", {
 					mode: "no-cors",
-					method: "PUT"
+					method: "PUT",
 				}),
 				{
 					name: "TypeError",
-					message: "Method 'PUT' is not allowed in 'no-cors' mode."
-				}
+					message: "Method 'PUT' is not allowed in 'no-cors' mode.",
+				},
 			);
 		});
 
@@ -2488,13 +2505,13 @@ describe("FetchMocker", () => {
 				status: 404,
 				statusText: "Not Found",
 				headers: {
-					"X-Custom": "value"
+					"X-Custom": "value",
 				},
-				body: "Not found!"
+				body: "Not found!",
 			});
 
 			const response = await fetchMocker.fetch(API_URL + "/hello", {
-				mode: "no-cors"
+				mode: "no-cors",
 			});
 
 			assert.strictEqual(response.type, "opaque");
@@ -2520,12 +2537,12 @@ describe("FetchMocker", () => {
 
 			await assert.rejects(
 				fetchMocker.fetch(API_URL + "/hello", {
-					mode: "same-origin"
+					mode: "same-origin",
 				}),
 				{
 					name: "TypeError",
-					message: `Failed to fetch. Request mode is "same-origin" but the URL's origin is not same as the request origin ${new URL(ALT_BASE_URL).origin}`
-				}
+					message: `Failed to fetch. Request mode is "same-origin" but the URL's origin is not same as the request origin ${new URL(ALT_BASE_URL).origin}`,
+				},
 			);
 		});
 
@@ -2538,11 +2555,11 @@ describe("FetchMocker", () => {
 
 			server.get("/hello", {
 				status: 200,
-				body: "Hello world!"
+				body: "Hello world!",
 			});
 
 			const response = await fetchMocker.fetch(API_URL + "/hello", {
-				mode: "same-origin"
+				mode: "same-origin",
 			});
 
 			assert.strictEqual(response.status, 200);

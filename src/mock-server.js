@@ -92,11 +92,10 @@ function assertNoMethod(request) {
  * @throws {TypeError} If the response pattern is invalid.
  */
 function assertValidResponsePattern(responsePattern) {
-	
 	if (!responsePattern) {
 		throw new TypeError("Response pattern is required.");
 	}
-	
+
 	if (!("status" in responsePattern)) {
 		throw new TypeError("Response pattern must include a status.");
 	}
@@ -138,18 +137,18 @@ function assertValidResponsePattern(responsePattern) {
  * @returns {Map<string,string>} A map of cookie names to values
  */
 function parseCookies(cookieHeader) {
-    const cookies = new Map();
-    
-    if (!cookieHeader) {
-        return cookies;
-    }
+	const cookies = new Map();
+
+	if (!cookieHeader) {
+		return cookies;
+	}
 
 	cookieHeader.split(";").forEach(cookie => {
 		const [name, value] = cookie.trim().split("=");
 		cookies.set(decodeURIComponent(name), decodeURIComponent(value));
 	});
 
-    return cookies;
+	return cookies;
 }
 
 /**
@@ -161,7 +160,7 @@ export class Route {
 	 * @type {RequestPattern}
 	 */
 	#request;
-	
+
 	/**
 	 * The response to return for the route.
 	 * @type {ResponsePattern|undefined}
@@ -230,20 +229,21 @@ export class Route {
 	 */
 	async createResponse(request, PreferredResponse) {
 		const requestMatch = this.#matcher.traceMatches({
-            method: request.method,
-            url: request.url,
-            headers: Object.fromEntries([...request.headers.entries()]),
-        });
-        
-        const cookies = parseCookies(request.headers.get('cookie'));
-        const response = await this.#createResponse(request, {
+			method: request.method,
+			url: request.url,
+			headers: Object.fromEntries([...request.headers.entries()]),
+		});
+
+		const cookies = parseCookies(request.headers.get("cookie"));
+		const response = await this.#createResponse(request, {
 			cookies,
 			params: requestMatch.params,
 			query: requestMatch.query,
 		});
-		
-		const { body, delay, ...init } = typeof response === "number" ? { status: response } : response;
-		
+
+		const { body, delay, ...init } =
+			typeof response === "number" ? { status: response } : response;
+
 		if (!init.status) {
 			init.status = 200;
 		}
@@ -252,11 +252,9 @@ export class Route {
 
 		// wait for the delay if there is one
 		if (delay) {
-			await new Promise(resolve =>
-				setTimeout(resolve, delay),
-			);
+			await new Promise(resolve => setTimeout(resolve, delay));
 		}
-		
+
 		// if the body is an object, return JSON
 		if (typeof body === "object") {
 			return new PreferredResponse(JSON.stringify(body), {
@@ -280,7 +278,7 @@ export class Route {
 				},
 			});
 		}
-		
+
 		// otherwise return the body as bytes
 		return new PreferredResponse(body, {
 			...init,
@@ -373,16 +371,16 @@ export class MockServer {
 		});
 
 		assertValidRequestPattern(requestPattern);
-		
+
 		/** @type {ResponseCreator} */
 		let createResponse;
-		
+
 		/** @type {ResponsePattern|undefined} */
 		let responsePattern = undefined;
-		
+
 		/*
 		 * We always want to create a new response function so that the
-		 * route can more easily deal with generating responses. We 
+		 * route can more easily deal with generating responses. We
 		 * don't always have a responsePattern if this is a function.
 		 */
 		if (typeof routeResponse === "function") {
@@ -390,7 +388,8 @@ export class MockServer {
 		} else {
 			responsePattern = /** @type {ResponsePattern} */ (routeResponse);
 			assertValidResponsePattern(responsePattern);
-			createResponse = () => /** @type {ResponsePattern} */ (responsePattern);
+			createResponse = () =>
+				/** @type {ResponsePattern} */ (responsePattern);
 		}
 
 		this.#routes.push(
@@ -506,10 +505,9 @@ export class MockServer {
 	 * @returns {Promise<{response:Response|undefined,traces: Array<Trace>}>} The trace match result.
 	 */
 	async traceReceive(request, PreferredResponse = Response) {
-		
 		// we need to clone the request before reading from it so we can use it again later
 		const clonedRequest = request.clone();
-		
+
 		// convert into a RequestPattern so each route doesn't have to read the body
 		const requestPattern = {
 			method: request.method,
@@ -542,7 +540,10 @@ export class MockServer {
 				 * Response constructor doesn't allow setting the URL so we
 				 * need to set it after creating the response.
 				 */
-				const response = await route.createResponse(clonedRequest, PreferredResponse);
+				const response = await route.createResponse(
+					clonedRequest,
+					PreferredResponse,
+				);
 
 				return { response, traces };
 			}
@@ -556,16 +557,16 @@ export class MockServer {
 		 * for each of them.
 		 */
 		const matchedRoutes = this.#matchedRoutes;
-		
+
 		for (let i = 0; i < matchedRoutes.length; i++) {
 			const route = matchedRoutes[i];
 			const trace = route.traceMatches(requestPattern);
-			
+
 			trace.messages.push("❌ Route was already called.");
-			
+
 			traces.push({ ...trace, title: route.toString() });
 		}
-		
+
 		return { response: undefined, traces };
 	}
 

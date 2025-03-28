@@ -53,7 +53,7 @@ ${
 	traces.length === 0
 		? "No partial matches found."
 		: "Partial matches:\n\n" +
-		  traces
+			traces
 				.map(trace => {
 					let traceMessage = `${trace.title}:`;
 
@@ -256,11 +256,10 @@ export class FetchMocker {
 						this.#attachCredentialsToRequest(request);
 					}
 				} else {
-										
 					// check for same-origin mode
 					if (request.mode === "same-origin") {
 						throw new TypeError(
-							`Failed to fetch. Request mode is "same-origin" but the URL's origin is not same as the request origin ${this.#baseUrl.origin}`
+							`Failed to fetch. Request mode is "same-origin" but the URL's origin is not same as the request origin ${this.#baseUrl.origin}`,
 						);
 					}
 
@@ -268,7 +267,7 @@ export class FetchMocker {
 					isSimpleRequest = isCorsSimpleRequest(request);
 					const includeCredentials =
 						request.credentials === "include";
-						
+
 					validateCorsRequest(request, this.#baseUrl.origin);
 
 					if (isSimpleRequest) {
@@ -306,12 +305,11 @@ export class FetchMocker {
 			const response = await this.#internalFetch(request, init?.body);
 
 			if (useCors && this.#baseUrl) {
-				
 				// handle no-cors mode for any cross-origin request
 				if (isSimpleRequest && request.mode === "no-cors") {
 					return createOpaqueResponse(this.#Response);
 				}
-				
+
 				processCorsResponse(
 					response,
 					this.#baseUrl.origin,
@@ -354,7 +352,6 @@ export class FetchMocker {
 	 * @throws {Error} When no route is matched.
 	 */
 	async #internalFetch(request, body = null) {
-
 		const allTraces = [];
 
 		/*
@@ -372,7 +369,9 @@ export class FetchMocker {
 				// Set response.url and type
 				Object.defineProperties(response, {
 					url: { value: request.url },
-					type: { value: request.mode === "cors" ? "cors" : "default" }
+					type: {
+						value: request.mode === "cors" ? "cors" : "default",
+					},
 				});
 				return response;
 			}
@@ -408,16 +407,16 @@ export class FetchMocker {
 				"Cannot create preflight request without a base URL.",
 			);
 		}
-		
+
 		const nonsimpleHeaders = getUnsafeHeaders(request);
-		
+
 		/** @type {Record<string,string>} */
 		const headers = {
 			Accept: "*/*",
 			[CORS_REQUEST_METHOD]: request.method,
 			[CORS_ORIGIN]: this.#baseUrl.origin,
 		};
-		
+
 		if (nonsimpleHeaders.length > 0) {
 			headers[CORS_REQUEST_HEADERS] = nonsimpleHeaders.join(",");
 		}
@@ -537,7 +536,7 @@ export class FetchMocker {
 		}
 
 		let originalFetchers = this.#originalFetchers.get(object);
-		
+
 		if (!originalFetchers) {
 			originalFetchers = new Map();
 			this.#originalFetchers.set(object, originalFetchers);
@@ -564,7 +563,7 @@ export class FetchMocker {
 		}
 
 		const originalFetchers = this.#originalFetchers.get(object);
-		
+
 		if (originalFetchers) {
 			// restore all original fetchers
 			for (const [property, originalFetch] of originalFetchers) {
