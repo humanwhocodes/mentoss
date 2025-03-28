@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.9.1](https://github.com/humanwhocodes/mentoss/compare/mentoss-v0.9.0...mentoss-v0.9.1) (2025-03-28)
+
+
+### Bug Fixes
+
+* Ensure ArrayBuffer is passed throughto response ([#90](https://github.com/humanwhocodes/mentoss/issues/90)) ([f473bf9](https://github.com/humanwhocodes/mentoss/commit/f473bf9984c4877a709c8d4e19cfb899d08a9401))
+* ReadableStream in request body should require preflight ([08c5521](https://github.com/humanwhocodes/mentoss/commit/08c552157d144f8417ead5186be8f81131c4b640))
+
 ## [0.9.0](https://github.com/humanwhocodes/mentoss/compare/mentoss-v0.8.0...mentoss-v0.9.0) (2025-03-21)
 
 
