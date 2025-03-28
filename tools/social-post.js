@@ -28,14 +28,14 @@ bullet points summarizing the release notes (the bullets should each begin with 
 and you should prioritize features over bug fixes when there isn't enough room),
 followed by an empty line, and end with one short sentence and the link to the new release (no emoji, just the URL).
 The tone should be professional but friendly. Do not use exclamation points,
-hashtags, or the word "we".`; 
+hashtags, or the word "we".`;
 
 //-----------------------------------------------------------------------------
 // Helpers
 //-----------------------------------------------------------------------------
 
 const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
+	apiKey: process.env.OPENAI_API_KEY,
 });
 
 /**
@@ -43,11 +43,11 @@ const openai = new OpenAI({
  * @returns {Promise<{ html_url: string, tag_name: string, body: string }>} The latest release.
  */
 async function getLatestRelease() {
-    const response = await fetch(`${GITHUB_API}/${REPO}/releases/latest`);
-    if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    return await response.json();
+	const response = await fetch(`${GITHUB_API}/${REPO}/releases/latest`);
+	if (!response.ok) {
+		throw new Error(`HTTP error! status: ${response.status}`);
+	}
+	return await response.json();
 }
 
 /**
@@ -58,18 +58,18 @@ async function getLatestRelease() {
  * @returns {Promise<string>} The generated tweet
  */
 async function generateSocialPost(version, releaseNotes, url) {
-    const completion = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: [
-            { role: "system", content: SYSTEM_PROMPT },
-            {
-                role: "user",
-                content: `Create a post summarizing this release for Mentoss ${version}: ${releaseNotes}\n\nURL is ${url}`,
-            }
-        ]
-    });
+	const completion = await openai.chat.completions.create({
+		model: "gpt-4o-mini",
+		messages: [
+			{ role: "system", content: SYSTEM_PROMPT },
+			{
+				role: "user",
+				content: `Create a post summarizing this release for Mentoss ${version}: ${releaseNotes}\n\nURL is ${url}`,
+			},
+		],
+	});
 
-    return completion.choices[0]?.message?.content;
+	return completion.choices[0]?.message?.content;
 }
 
 //-----------------------------------------------------------------------------

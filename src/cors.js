@@ -17,7 +17,7 @@ export const alwaysSafeRequestHeaders = new Set([
 	"accept",
 	"accept-language",
 	"content-language",
-]);	
+]);
 
 // the headers allowed for simple requests
 export const safeRequestHeaders = new Set([
@@ -85,7 +85,7 @@ const noCorsSafeHeaders = new Set([
 	"accept-language",
 	"content-language",
 	"content-type",
-]);	
+]);
 
 // the methods that are forbidden to be used with CORS
 export const forbiddenMethods = new Set(["CONNECT", "TRACE", "TRACK"]);
@@ -184,9 +184,9 @@ function isSimpleRangeHeader(range) {
  * @see https://fetch.spec.whatwg.org/#cors-unsafe-request-header-byte
  */
 function containsCorsUnsafeRequestHeaderByte(str) {
-	
-	// eslint-disable-next-line no-control-regex
-	const unsafeBytePattern = /[\x00-\x08\x0A-\x1F\x22\x28\x29\x3A\x3C\x3E\x3F\x40\x5B\x5C\x5D\x7B\x7D\x7F]/u;
+	const unsafeBytePattern =
+		// eslint-disable-next-line no-control-regex
+		/[\x00-\x08\x0A-\x1F\x22\x28\x29\x3A\x3C\x3E\x3F\x40\x5B\x5C\x5D\x7B\x7D\x7F]/u;
 	return unsafeBytePattern.test(str);
 }
 
@@ -198,11 +198,10 @@ function containsCorsUnsafeRequestHeaderByte(str) {
  * @see https://fetch.spec.whatwg.org/#no-cors-safelisted-request-header-name
  */
 function isNoCorsSafeListedRequestHeader(name, value) {
-	
 	if (!noCorsSafeHeaders.has(name.toLowerCase())) {
 		return false;
 	}
-	
+
 	return isCorsSafeListedRequestHeader(name, value);
 }
 
@@ -214,42 +213,40 @@ function isNoCorsSafeListedRequestHeader(name, value) {
  * @see https://fetch.spec.whatwg.org/#cors-safelisted-request-header
  */
 function isCorsSafeListedRequestHeader(name, value) {
-	
 	if (value.length > 128) {
 		return false;
 	}
-	
+
 	const hasUnsafeByte = containsCorsUnsafeRequestHeaderByte(value);
-	
+
 	switch (name.toLowerCase()) {
 		case "accept":
 			return !hasUnsafeByte;
-			
+
 		case "accept-language":
 		case "content-language":
 			return !/[^0-9A-Za-z *,\-.=;]/.test(value);
-			
+
 		case "content-type":
 			if (hasUnsafeByte) {
 				return false;
 			}
-			
+
 			return simpleRequestContentTypes.has(value.toLowerCase());
-			
+
 		case "range":
 			return isSimpleRangeHeader(value);
-			
+
 		default:
 			return false;
 	}
-	
 }
 
 /**
  * Checks if a string is a valid origin.
  * @param {string} origin The origin to validate.
  * @returns {boolean} `true` if the origin is valid, `false` otherwise.
-*/
+ */
 function isValidOrigin(origin) {
 	try {
 		new URL(origin);
@@ -272,7 +269,7 @@ function isValidOrigin(origin) {
  */
 export function createCorsError(requestUrl, origin, message) {
 	return new TypeError(
-		`Access to fetch at '${requestUrl}' from origin '${origin}' has been blocked by CORS policy: ${message}`
+		`Access to fetch at '${requestUrl}' from origin '${origin}' has been blocked by CORS policy: ${message}`,
 	);
 }
 
@@ -287,7 +284,7 @@ export function createCorsPreflightError(requestUrl, origin, message) {
 	return createCorsError(
 		requestUrl,
 		origin,
-		`Response to preflight request doesn't pass access control check: ${message}`
+		`Response to preflight request doesn't pass access control check: ${message}`,
 	);
 }
 
@@ -301,13 +298,15 @@ export function createCorsPreflightError(requestUrl, origin, message) {
  */
 export function assertCorsResponse(response, origin, isPreflight = false) {
 	const originHeader = response.headers.get(CORS_ALLOW_ORIGIN);
-	const errorCreator = isPreflight ? createCorsPreflightError : createCorsError;
+	const errorCreator = isPreflight
+		? createCorsPreflightError
+		: createCorsError;
 
 	if (!originHeader) {
 		throw errorCreator(
 			response.url,
 			origin,
-			"No 'Access-Control-Allow-Origin' header is present on the requested resource."
+			"No 'Access-Control-Allow-Origin' header is present on the requested resource.",
 		);
 	}
 
@@ -316,7 +315,7 @@ export function assertCorsResponse(response, origin, isPreflight = false) {
 		throw errorCreator(
 			response.url,
 			origin,
-			`The 'Access-Control-Allow-Origin' header contains multiple values '${originHeader}', but only one is allowed.`
+			`The 'Access-Control-Allow-Origin' header contains multiple values '${originHeader}', but only one is allowed.`,
 		);
 	}
 
@@ -326,17 +325,17 @@ export function assertCorsResponse(response, origin, isPreflight = false) {
 			throw errorCreator(
 				response.url,
 				origin,
-				`The 'Access-Control-Allow-Origin' header contains the invalid value '${originHeader}'.`
+				`The 'Access-Control-Allow-Origin' header contains the invalid value '${originHeader}'.`,
 			);
 		}
 
 		const originUrl = new URL(origin);
-		
+
 		if (originUrl.origin !== originHeader) {
 			throw errorCreator(
 				response.url,
 				origin,
-				`The 'Access-Control-Allow-Origin' header has a value '${originHeader}' that is not equal to the supplied origin.`
+				`The 'Access-Control-Allow-Origin' header has a value '${originHeader}' that is not equal to the supplied origin.`,
 			);
 		}
 	}
@@ -357,7 +356,7 @@ export function assertCorsCredentials(response, origin) {
 		throw createCorsError(
 			response.url,
 			origin,
-			"No 'Access-Control-Allow-Credentials' header is present on the requested resource."
+			"No 'Access-Control-Allow-Credentials' header is present on the requested resource.",
 		);
 	}
 
@@ -365,7 +364,7 @@ export function assertCorsCredentials(response, origin) {
 		throw createCorsError(
 			response.url,
 			origin,
-			"The 'Access-Control-Allow-Credentials' header has a value that is not 'true'."
+			"The 'Access-Control-Allow-Credentials' header has a value that is not 'true'.",
 		);
 	}
 
@@ -373,7 +372,7 @@ export function assertCorsCredentials(response, origin) {
 		throw createCorsError(
 			response.url,
 			origin,
-			"The 'Access-Control-Allow-Origin' header has a value of '*' which is not allowed when the 'Access-Control-Allow-Credentials' header is 'true'."
+			"The 'Access-Control-Allow-Origin' header has a value of '*' which is not allowed when the 'Access-Control-Allow-Credentials' header is 'true'.",
 		);
 	}
 
@@ -381,7 +380,7 @@ export function assertCorsCredentials(response, origin) {
 		throw createCorsError(
 			response.url,
 			origin,
-			"The 'Access-Control-Allow-Headers' header has a value of '*' which is not allowed when the 'Access-Control-Allow-Credentials' header is 'true'."
+			"The 'Access-Control-Allow-Headers' header has a value of '*' which is not allowed when the 'Access-Control-Allow-Credentials' header is 'true'.",
 		);
 	}
 
@@ -389,7 +388,7 @@ export function assertCorsCredentials(response, origin) {
 		throw createCorsError(
 			response.url,
 			origin,
-			"The 'Access-Control-Allow-Methods' header has a value of '*' which is not allowed when the 'Access-Control-Allow-Credentials' header is 'true'."
+			"The 'Access-Control-Allow-Methods' header has a value of '*' which is not allowed when the 'Access-Control-Allow-Credentials' header is 'true'.",
 		);
 	}
 
@@ -397,7 +396,7 @@ export function assertCorsCredentials(response, origin) {
 		throw createCorsError(
 			response.url,
 			origin,
-			"The 'Access-Control-Expose-Headers' header has a value of '*' which is not allowed when the 'Access-Control-Allow-Credentials' header is 'true'."
+			"The 'Access-Control-Expose-Headers' header has a value of '*' which is not allowed when the 'Access-Control-Allow-Credentials' header is 'true'.",
 		);
 	}
 }
@@ -411,30 +410,38 @@ export function assertCorsCredentials(response, origin) {
 export function assertValidNoCorsRequestInit(requestInit = {}) {
 	const headers = requestInit.headers;
 	const method = requestInit.method;
-	
+
 	// no method means GET
 	if (!method && !headers) {
 		return;
 	}
-	
+
 	// otherwise check it
 	if (method && !safeMethods.has(method)) {
-		throw new TypeError(`Method '${method}' is not allowed in 'no-cors' mode.`);
+		throw new TypeError(
+			`Method '${method}' is not allowed in 'no-cors' mode.`,
+		);
 	}
-	
+
 	// no headers means nothing to check
 	if (!headers) {
 		return;
 	}
-	
-	const headerKeyValues = Array.from(headers instanceof Headers ? headers.entries() : Object.entries(headers));
+
+	const headerKeyValues = Array.from(
+		headers instanceof Headers
+			? headers.entries()
+			: Object.entries(headers),
+	);
 
 	for (const [header, value] of headerKeyValues) {
 		if (!isNoCorsSafeListedRequestHeader(header, value)) {
-			throw new TypeError(`Header '${header}' is not allowed in 'no-cors' mode.`);
+			throw new TypeError(
+				`Header '${header}' is not allowed in 'no-cors' mode.`,
+			);
 		}
 	}
-}	
+}
 
 /**
  * Processes a CORS response to ensure it's valid and doesn't contain
@@ -491,7 +498,7 @@ export function isCorsSimpleRequest(request) {
 	if (!safeMethods.has(request.method)) {
 		return false;
 	}
-	
+
 	// ReadableStream is not allowed
 	if (request.body && request.body instanceof ReadableStream) {
 		return false;
@@ -536,20 +543,19 @@ export function validateCorsRequest(request, origin) {
 		throw createCorsError(
 			request.url,
 			origin,
-			`Method ${request.method} is not allowed.`
+			`Method ${request.method} is not allowed.`,
 		);
 	}
 
 	// check the headers
 	for (const header of request.headers.keys()) {
-		
 		const value = /** @type {string} */ (request.headers.get(header));
-		
+
 		if (isForbiddenRequestHeader(header, value)) {
 			throw createCorsError(
 				request.url,
 				origin,
-				`Header ${header} is not allowed.`
+				`Header ${header} is not allowed.`,
 			);
 		}
 	}
@@ -561,36 +567,35 @@ export function validateCorsRequest(request, origin) {
  * @returns {string[]} Array of header names that are not simple headers.
  */
 export function getUnsafeHeaders(request) {
-    const result = [];
-    const headers = request.headers;
+	const result = [];
+	const headers = request.headers;
 
-    for (const header of headers.keys()) {
-        
-        // Range header needs special validation
-        if (header === "range") {
-            const rangeValue = headers.get(header);
-            if (rangeValue && !isSimpleRangeHeader(rangeValue)) {
-                result.push(header);
-            }
-            continue;
-        }
+	for (const header of headers.keys()) {
+		// Range header needs special validation
+		if (header === "range") {
+			const rangeValue = headers.get(header);
+			if (rangeValue && !isSimpleRangeHeader(rangeValue)) {
+				result.push(header);
+			}
+			continue;
+		}
 
-        // Content-Type header needs special validation
-        if (header === "content-type") {
-            const contentType = headers.get(header);
-            if (contentType && !simpleRequestContentTypes.has(contentType)) {
-                result.push(header);
-            }
-            continue;
-        }
+		// Content-Type header needs special validation
+		if (header === "content-type") {
+			const contentType = headers.get(header);
+			if (contentType && !simpleRequestContentTypes.has(contentType)) {
+				result.push(header);
+			}
+			continue;
+		}
 
-        // Check if header is in the safe list
-        if (!safeRequestHeaders.has(header)) {
-            result.push(header);
-        }
-    }
+		// Check if header is in the safe list
+		if (!safeRequestHeaders.has(header)) {
+			result.push(header);
+		}
+	}
 
-    return result;
+	return result;
 }
 
 /**
@@ -679,7 +684,7 @@ export class CorsPreflightData {
 			throw createCorsError(
 				request.url,
 				origin,
-				`Method ${method} is not allowed.`
+				`Method ${method} is not allowed.`,
 			);
 		}
 	}
@@ -694,9 +699,8 @@ export class CorsPreflightData {
 	#validateHeaders(request, origin) {
 		const { headers } = request;
 		const unsafeHeaders = new Set(getUnsafeHeaders(request));
-		
+
 		for (const header of headers.keys()) {
-			
 			// simple headers are always allowed
 			if (alwaysSafeRequestHeaders.has(header)) {
 				continue;
@@ -710,15 +714,19 @@ export class CorsPreflightData {
 				throw createCorsError(
 					request.url,
 					origin,
-					`Header ${header} is not allowed.`
+					`Header ${header} is not allowed.`,
 				);
 			}
 
-			if (unsafeHeaders.has(header) && !this.allowAllHeaders && !this.allowedHeaders.has(header)) {
+			if (
+				unsafeHeaders.has(header) &&
+				!this.allowAllHeaders &&
+				!this.allowedHeaders.has(header)
+			) {
 				throw createCorsError(
 					request.url,
 					origin,
-					`Header ${header} is not allowed.`
+					`Header ${header} is not allowed.`,
 				);
 			}
 		}

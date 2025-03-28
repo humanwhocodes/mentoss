@@ -9,7 +9,13 @@
 //-----------------------------------------------------------------------------
 
 import assert from "node:assert";
-import { isCorsSimpleRequest, getUnsafeHeaders, assertCorsResponse, createCorsError, createCorsPreflightError } from "../src/cors.js";
+import {
+	isCorsSimpleRequest,
+	getUnsafeHeaders,
+	assertCorsResponse,
+	createCorsError,
+	createCorsPreflightError,
+} from "../src/cors.js";
 
 //-----------------------------------------------------------------------------
 // Tests
@@ -95,18 +101,18 @@ describe("http", () => {
 				});
 				assert.strictEqual(isCorsSimpleRequest(request), true);
 			});
-			
+
 			it("should return false for POST request with ReadableStream body", () => {
 				const stream = new ReadableStream({
 					start(controller) {
 						controller.enqueue(new Uint8Array([1, 2, 3]));
 						controller.close();
-					}
+					},
 				});
 				const request = new Request("https://example.com", {
 					method: "POST",
 					body: stream,
-					duplex: "half"
+					duplex: "half",
 				});
 				assert.strictEqual(isCorsSimpleRequest(request), false);
 			});
@@ -190,7 +196,7 @@ describe("http", () => {
 			});
 		});
 	});
-	
+
 	describe("getUnsafeHeaders()", () => {
 		it("should return empty array for request with no headers", () => {
 			const request = new Request("https://example.com");
@@ -201,7 +207,7 @@ describe("http", () => {
 			const headers = new Headers({
 				Accept: "application/json",
 				"Accept-Language": "en-US",
-				"Content-Language": "en-US"
+				"Content-Language": "en-US",
 			});
 			const request = new Request("https://example.com", { headers });
 			assert.deepStrictEqual(getUnsafeHeaders(request), []);
@@ -211,18 +217,18 @@ describe("http", () => {
 			const headers = new Headers({
 				Accept: "application/json",
 				Authorization: "Bearer token",
-				"X-Custom-Header": "value"
+				"X-Custom-Header": "value",
 			});
 			const request = new Request("https://example.com", { headers });
-			assert.deepStrictEqual(
-				getUnsafeHeaders(request),
-				["authorization", "x-custom-header"]
-			);
+			assert.deepStrictEqual(getUnsafeHeaders(request), [
+				"authorization",
+				"x-custom-header",
+			]);
 		});
 
 		it("should identify non-simple content-type header", () => {
 			const headers = new Headers({
-				"Content-Type": "application/json"
+				"Content-Type": "application/json",
 			});
 			const request = new Request("https://example.com", { headers });
 			assert.deepStrictEqual(getUnsafeHeaders(request), ["content-type"]);
@@ -230,7 +236,7 @@ describe("http", () => {
 
 		it("should not include simple content-type header", () => {
 			const headers = new Headers({
-				"Content-Type": "text/plain"
+				"Content-Type": "text/plain",
 			});
 			const request = new Request("https://example.com", { headers });
 			assert.deepStrictEqual(getUnsafeHeaders(request), []);
@@ -238,7 +244,7 @@ describe("http", () => {
 
 		it("should identify invalid range header", () => {
 			const headers = new Headers({
-				Range: "bytes=0-1024,2048-3072"
+				Range: "bytes=0-1024,2048-3072",
 			});
 			const request = new Request("https://example.com", { headers });
 			assert.deepStrictEqual(getUnsafeHeaders(request), ["range"]);
@@ -246,7 +252,7 @@ describe("http", () => {
 
 		it("should not include valid range header", () => {
 			const headers = new Headers({
-				Range: "bytes=0-1024"
+				Range: "bytes=0-1024",
 			});
 			const request = new Request("https://example.com", { headers });
 			assert.deepStrictEqual(getUnsafeHeaders(request), []);
@@ -257,23 +263,25 @@ describe("http", () => {
 				Authorization: "Bearer token",
 				"Content-Type": "application/json",
 				Range: "bytes=0-1024,2048-3072",
-				"X-Custom-Header": "value"
+				"X-Custom-Header": "value",
 			});
 			const request = new Request("https://example.com", { headers });
-			assert.deepStrictEqual(
-				getUnsafeHeaders(request),
-				["authorization", "content-type", "range", "x-custom-header"]
-			);
+			assert.deepStrictEqual(getUnsafeHeaders(request), [
+				"authorization",
+				"content-type",
+				"range",
+				"x-custom-header",
+			]);
 		});
 	});
 
 	describe("assertCorsResponse()", () => {
 		it("should not throw when Access-Control-Allow-Origin is *", () => {
 			const headers = new Headers({
-				"Access-Control-Allow-Origin": "*"
+				"Access-Control-Allow-Origin": "*",
 			});
 			const response = new Response(null, { headers });
-			
+
 			assert.doesNotThrow(() => {
 				assertCorsResponse(response, "https://example.com");
 			});
@@ -282,10 +290,10 @@ describe("http", () => {
 		it("should not throw when Access-Control-Allow-Origin matches origin", () => {
 			const origin = "https://example.com";
 			const headers = new Headers({
-				"Access-Control-Allow-Origin": origin
+				"Access-Control-Allow-Origin": origin,
 			});
 			const response = new Response(null, { headers });
-			
+
 			assert.doesNotThrow(() => {
 				assertCorsResponse(response, origin);
 			});
@@ -294,79 +302,80 @@ describe("http", () => {
 		it("should throw TypeError when Access-Control-Allow-Origin header is missing", () => {
 			const response = new Response();
 			const origin = "https://example.com";
-			
+
 			assert.throws(
 				() => assertCorsResponse(response, origin),
 				createCorsError(
 					response.url,
 					origin,
-					"No 'Access-Control-Allow-Origin' header is present on the requested resource."
-				)
+					"No 'Access-Control-Allow-Origin' header is present on the requested resource.",
+				),
 			);
 		});
 
 		it("should throw TypeError when Access-Control-Allow-Origin doesn't match origin", () => {
 			const headers = new Headers({
-				"Access-Control-Allow-Origin": "https://example.com"
+				"Access-Control-Allow-Origin": "https://example.com",
 			});
 			const response = new Response(null, { headers });
 			const origin = "https://other.com";
-			
+
 			assert.throws(
 				() => assertCorsResponse(response, origin),
 				createCorsError(
 					response.url,
 					origin,
-					"The 'Access-Control-Allow-Origin' header has a value 'https://example.com' that is not equal to the supplied origin."
-				)
+					"The 'Access-Control-Allow-Origin' header has a value 'https://example.com' that is not equal to the supplied origin.",
+				),
 			);
 		});
 
 		it("should throw TypeError when Access-Control-Allow-Origin contains multiple values", () => {
 			const headers = new Headers({
-				"Access-Control-Allow-Origin": "https://example.com, https://other.com"
+				"Access-Control-Allow-Origin":
+					"https://example.com, https://other.com",
 			});
 			const response = new Response(null, { headers });
 			const origin = "https://example.com";
-			
+
 			assert.throws(
 				() => assertCorsResponse(response, origin),
 				createCorsError(
 					response.url,
 					origin,
-					"The 'Access-Control-Allow-Origin' header contains multiple values 'https://example.com, https://other.com', but only one is allowed."
-				)
+					"The 'Access-Control-Allow-Origin' header contains multiple values 'https://example.com, https://other.com', but only one is allowed.",
+				),
 			);
 		});
 
 		it("should throw TypeError when Access-Control-Allow-Origin header is missing in preflight", () => {
 			const response = new Response();
 			const origin = "https://example.com";
-			
+
 			assert.throws(
 				() => assertCorsResponse(response, origin, true),
 				createCorsPreflightError(
 					response.url,
 					origin,
-					"No 'Access-Control-Allow-Origin' header is present on the requested resource."
-				)
+					"No 'Access-Control-Allow-Origin' header is present on the requested resource.",
+				),
 			);
 		});
 
 		it("should throw TypeError when Access-Control-Allow-Origin doesn't match origin in preflight", () => {
 			const headers = new Headers({
-				"Access-Control-Allow-Origin": "https://example.com"
+				"Access-Control-Allow-Origin": "https://example.com",
 			});
 			const response = new Response(null, { headers });
 			const origin = "https://other.com";
-			
+
 			assert.throws(
 				() => assertCorsResponse(response, origin, true),
 				createCorsPreflightError(
 					response.url,
 					origin,
-					"The 'Access-Control-Allow-Origin' header has a value 'https://example.com' that is not equal to the supplied origin."
-				)
+					"The 'Access-Control-Allow-Origin' header has a value 'https://example.com' that is not equal to the supplied origin.",
+				),
 			);
 		});
 	});
@@ -376,13 +385,13 @@ describe("http", () => {
 			const error = createCorsError(
 				"https://example.com",
 				"https://other.com",
-				"Test message"
+				"Test message",
 			);
-			
+
 			assert.strictEqual(error instanceof TypeError, true);
 			assert.strictEqual(
 				error.message,
-				"Access to fetch at 'https://example.com' from origin 'https://other.com' has been blocked by CORS policy: Test message"
+				"Access to fetch at 'https://example.com' from origin 'https://other.com' has been blocked by CORS policy: Test message",
 			);
 		});
 	});
@@ -392,13 +401,13 @@ describe("http", () => {
 			const error = createCorsPreflightError(
 				"https://example.com",
 				"https://other.com",
-				"Test message"
+				"Test message",
 			);
-			
+
 			assert.strictEqual(error instanceof TypeError, true);
 			assert.strictEqual(
 				error.message,
-				"Access to fetch at 'https://example.com' from origin 'https://other.com' has been blocked by CORS policy: Response to preflight request doesn't pass access control check: Test message"
+				"Access to fetch at 'https://example.com' from origin 'https://other.com' has been blocked by CORS policy: Response to preflight request doesn't pass access control check: Test message",
 			);
 		});
 	});

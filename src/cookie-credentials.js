@@ -182,7 +182,7 @@ class Cookie {
 
 		return cookieString + "]";
 	}
-	
+
 	/**
 	 * Returns a unique key for a cookie based on its properties.
 	 * @param {string} name The name of the cookie.
@@ -287,20 +287,25 @@ export class CookieCredentials {
 	 * @throws {TypeError} If the cookie does not exist.
 	 */
 	deleteCookie(cookieInfo) {
-		
-		
 		if (!cookieInfo.name) {
 			throw new TypeError("Cookie name is required.");
 		}
-		
+
 		if (!cookieInfo.domain && !this.#domain) {
 			throw new TypeError("Domain is required to delete a cookie.");
 		}
-		
-		const cookieKey = Cookie.getKey(cookieInfo.name, String(cookieInfo.domain ?? this.#domain), cookieInfo.path, cookieInfo.secure);
+
+		const cookieKey = Cookie.getKey(
+			cookieInfo.name,
+			String(cookieInfo.domain ?? this.#domain),
+			cookieInfo.path,
+			cookieInfo.secure,
+		);
 
 		if (!this.#cookies.has(cookieKey)) {
-			throw new TypeError(`Cookie does not exist: ${cookieInfo.toString()}`);
+			throw new TypeError(
+				`Cookie does not exist: ${cookieInfo.toString()}`,
+			);
 		}
 
 		this.#cookies.delete(cookieKey);

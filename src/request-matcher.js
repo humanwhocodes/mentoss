@@ -106,7 +106,7 @@ export class RequestMatcher {
 		params,
 	}) {
 		this.#method = method;
-		
+
 		/*
 		 * URLPattern treats a leading slash as being an absolute path from
 		 * the domain in the base URL (if present). So if the URL is /api
@@ -117,7 +117,7 @@ export class RequestMatcher {
 		 */
 		this.#pattern = new URLPattern(
 			url.startsWith("/") ? url.slice(1) : url,
-			!baseUrl || baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`
+			!baseUrl || baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`,
 		);
 		this.#body = body;
 		this.#headers = headers;
@@ -132,7 +132,6 @@ export class RequestMatcher {
 	 * @returns {{matches:boolean, messages:string[], params:Record<string, string|undefined>, query:URLSearchParams}} True if the request matches, false if not.
 	 */
 	traceMatches(request) {
-		
 		/*
 		 * Check the URL first. This is helpful for tracing when requests don't match
 		 * because people more typically get the method wrong rather than the URL.
@@ -158,7 +157,7 @@ export class RequestMatcher {
 				messages: [
 					...messages,
 					`❌ Method does not match. Expected ${this.#method.toUpperCase()} but received ${request.method.toUpperCase()}.`,
-					],
+				],
 				params,
 				query,
 			};
@@ -378,7 +377,7 @@ export class RequestMatcher {
 						query,
 					};
 				}
-				
+
 				// body is an object so proceed
 				if (!deepCompare(request.body, this.#body)) {
 					return {

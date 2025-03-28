@@ -218,7 +218,7 @@ describe("CookieCredentials", () => {
 					});
 				}, /name is required/gi);
 			});
-			
+
 			it("should throw an error when domain is missing", () => {
 				const credentials = new CookieCredentials();
 
@@ -382,7 +382,6 @@ describe("CookieCredentials", () => {
 				);
 				assert.strictEqual(headers.get("Cookie"), null);
 			});
-			
 		});
 	});
 });
