@@ -256,7 +256,7 @@ export class Route {
 		}
 
 		// if the body is an object, return JSON
-		if (typeof body === "object") {
+		if (typeof body === "object" && body.constructor === Object) {
 			return new PreferredResponse(JSON.stringify(body), {
 				...init,
 				statusText,

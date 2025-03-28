@@ -271,6 +271,28 @@ describe("MockServer", () => {
 				`Response was delayed ${elapsed}ms, expected at least 500ms.`,
 			);
 		});
+		
+		it("should return an ArrayBuffer when response body is an ArrayBuffer", async () => {
+			
+			const requestBody = new Uint8Array([1, 2, 3, 4, 5]);
+			
+			server.get("/test", {
+				status: 200,
+				body: requestBody.buffer,
+			});
+			
+			const request = createRequest({
+				method: "GET",
+				url: `${BASE_URL}/test`,
+			});
+			
+			const response = await server.receive(request);
+			assert.strictEqual(response.status, 200);
+			assert.strictEqual(response.statusText, "OK");
+			
+			const responseBody = new Uint8Array(await getResponseBody(response));
+			assert.deepEqual(responseBody, requestBody);
+		});
 
 		describe("ResponseCreator Functions", () => {
 			afterEach(() => {
