@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.2](https://github.com/humanwhocodes/mentoss/compare/mentoss-v0.9.1...mentoss-v0.9.2) (2025-04-01)
+
+
+### Bug Fixes
+
+* Response body support plain Array  ([#92](https://github.com/humanwhocodes/mentoss/issues/92)) ([bf2b699](https://github.com/humanwhocodes/mentoss/commit/bf2b6999dd481487172082bada4f9f555cae2c91))
+
 ## [0.9.1](https://github.com/humanwhocodes/mentoss/compare/mentoss-v0.9.0...mentoss-v0.9.1) (2025-03-28)
 
 
