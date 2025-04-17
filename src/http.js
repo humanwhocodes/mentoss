@@ -83,3 +83,46 @@ export const verbs = [
 	// "CONNECT",
 	// "TRACE"
 ];
+
+const redirectStatuses = new Set([301, 302, 303, 307, 308]);
+const methodChangingRedirectStatuses = new Set([301, 302, 303]);
+const bodyPreservingRedirectStatuses = new Set([307, 308]);
+
+// methods that don't need request bodies
+const bodylessMethods = new Set(["GET", "HEAD"]);
+
+/**
+ * Checks if a status code represents a redirect
+ * @param {number} status The HTTP status code
+ * @returns {boolean} True if the status code is a redirect status
+ */
+export function isRedirectStatus(status) {
+	return redirectStatuses.has(status);
+}
+
+/**
+ * Checks if a status code is a redirect that changes the method to GET
+ * @param {number} status The HTTP status code
+ * @returns {boolean} True if the status code is a method-changing redirect status
+ */
+export function isMethodChangingRedirectStatus(status) {
+	return methodChangingRedirectStatuses.has(status);
+}
+
+/**
+ * Checks if a status code is a body-preserving redirect
+ * @param {number} status The HTTP status code
+ * @returns {boolean} True if the status code is a body-preserving redirect status
+ */
+export function isBodyPreservingRedirectStatus(status) {
+	return bodyPreservingRedirectStatuses.has(status);
+}
+
+/**
+ * Checks if a method is considered a safe method (GET or HEAD)
+ * @param {string} method The HTTP method
+ * @returns {boolean} True if the method is a safe method
+ */
+export function isBodylessMethod(method) {
+	return bodylessMethods.has(method);
+}
