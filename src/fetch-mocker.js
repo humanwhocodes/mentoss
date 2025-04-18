@@ -27,7 +27,8 @@ import { createCustomRequest } from "./custom-request.js";
 import { 
 	isRedirectStatus, 
 	isBodylessMethod, 
-	isBodyPreservingRedirectStatus 
+	isBodyPreservingRedirectStatus,
+	isRequestBodyHeader
 } from "./http.js";
 
 //-----------------------------------------------------------------------------
@@ -168,24 +169,18 @@ function createOpaqueRedirectResponse(ResponseConstructor, url) {
 }
 
 /**
- * Determines the appropriate request method for a redirect
+ * Checks if a redirect needs to adjust the request method and headers.
  * @param {Request} request The original request
  * @param {number} status The redirect status code
- * @returns {string} The method to use for the redirect
+ * @returns {boolean} True if the redirect needs to adjust the method
  */
-function getRedirectMethod(request, status) {
-	if (
-		// For 303 redirects, change method to GET if it's not already GET or HEAD
-		status === 303 && !isBodylessMethod(request.method) ||
-		
-		// For 301/302 redirects, change method to GET if the original method was POST
-		(status === 301 || status === 302) && request.method === "POST"
-	) {
-		return "GET";
-	}
+function redirectNeedsAdjustment(request, status) {
+	
+	// For 303 redirects, change method to GET if it's not already GET or HEAD
+	return status === 303 && !isBodylessMethod(request.method) ||
 
-	// For 307/308 redirects (and other cases), preserve the original method
-	return request.method;
+		// For 301/302 redirects, change method to GET if the original method was POST
+		(status === 301 || status === 302) && request.method === "POST";
 }
 
 /**
@@ -545,6 +540,7 @@ export class FetchMocker {
 	 * @param {URL[]} urlList The list of URLs already visited in this redirect chain
 	 * @param {any} requestBody The body of the original request
 	 * @returns {Promise<Response>} The final response after any redirects
+	 * @see https://fetch.spec.whatwg.org/#http-redirect-fetch
 	 */
 	async #processRedirect(response, request, urlList = [], requestBody = null) {
 		// Add current URL to list
@@ -600,12 +596,26 @@ export class FetchMocker {
 		if (urlList.length >= 20) {
 			throw new TypeError("Too many redirects (maximum is 20)");
 		}
-
+		
+		let method = request.method;
+		const headers = new Headers(request.headers);
+		
+		// If this is a redirect that changes the method, adjust accordingly
+		if (redirectNeedsAdjustment(request, response.status)) {
+			method = "GET";
+			
+			for (const header of headers.keys()) {
+				// Remove headers that should not be sent with GET requests
+				if (isRequestBodyHeader(header)) {
+					headers.delete(header);
+				}
+			}
+		}
+		
 		// Create a new request for the redirect
-		const method = getRedirectMethod(request, response.status);
 		const init = {
 			method,
-			headers: request.headers,
+			headers,
 			mode: request.mode,
 			credentials: request.credentials,
 			redirect: request.redirect,

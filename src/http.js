@@ -91,6 +91,13 @@ const bodyPreservingRedirectStatuses = new Set([307, 308]);
 // methods that don't need request bodies
 const bodylessMethods = new Set(["GET", "HEAD"]);
 
+const requestBodyHeaders = new Set([
+	"content-encoding",
+	"content-language",
+	"content-location",
+	"content-type",
+]);
+
 /**
  * Checks if a status code represents a redirect
  * @param {number} status The HTTP status code
@@ -125,4 +132,13 @@ export function isBodyPreservingRedirectStatus(status) {
  */
 export function isBodylessMethod(method) {
 	return bodylessMethods.has(method);
+}
+
+/**
+ * Checks if a header is a request body header
+ * @param {string} header The HTTP header name
+ * @returns {boolean} True if the header is a request body header
+ */
+export function isRequestBodyHeader(header) {
+	return requestBodyHeaders.has(header);
 }

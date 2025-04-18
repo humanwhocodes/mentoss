@@ -290,6 +290,225 @@ describe("Redirect Tests", () => {
                 error => error instanceof TypeError && /Too many redirects/.test(error.message)
             );
         });
+        
+        it("should change the method to GET on 301 redirects with a body", async () => {
+            const server = new MockServer(API_URL);
+            const fetchMocker = new FetchMocker({
+                servers: [server],
+                baseUrl: API_URL,
+            });
+
+            server.post("/original", {
+                status: 301,
+                headers: {
+                    "Location": "/redirected"
+                }
+            });
+
+            server.get("/redirected", {
+                status: 200,
+                body: "Redirected content"
+            });
+
+            const response = await fetchMocker.fetch("/original", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ data: "test" })
+            });
+
+            assert.strictEqual(response.status, 200);
+            assert.strictEqual(await response.text(), "Redirected content");
+            assert.strictEqual(response.redirected, true);
+        });
+        
+        it("should change the method to GET on 302 redirects with a body", async () => {
+            const server = new MockServer(API_URL);
+            const fetchMocker = new FetchMocker({
+                servers: [server],
+                baseUrl: API_URL,
+            });
+            server.post("/original", {
+                status: 302,
+                headers: {
+                    "Location": "/redirected"
+                }
+            });
+            server.get("/redirected", {
+                status: 200,
+                body: "Redirected content"
+            });
+            const response = await fetchMocker.fetch("/original", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },                
+                body: JSON.stringify({ data: "test" })
+            });
+            assert.strictEqual(response.status, 200);
+            assert.strictEqual(await response.text(), "Redirected content");
+            assert.strictEqual(response.redirected, true);
+        });
+        
+        it("should change the method to GET on 303 redirects with a body", async () => {
+            const server = new MockServer(API_URL);
+            const fetchMocker = new FetchMocker({
+                servers: [server],
+                baseUrl: API_URL,
+            });
+            server.put("/original", {
+                status: 303,
+                headers: {
+                    "Location": "/redirected"
+                }
+            });
+            server.get("/redirected", {
+                status: 200,
+                body: "Redirected content"
+            });
+            const response = await fetchMocker.fetch("/original", {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ data: "test" })
+            });
+            assert.strictEqual(response.status, 200);
+            assert.strictEqual(await response.text(), "Redirected content");
+            assert.strictEqual(response.redirected, true);
+        });
+        
+        it("should delete the content-type header on 301 redirects with a body", async () => {
+            const server = new MockServer(API_URL);
+            const fetchMocker = new FetchMocker({
+                servers: [server],
+                baseUrl: API_URL,
+            });
+
+            server.post("/original", {
+                status: 301,
+                headers: {
+                    "Location": "/redirected"
+                }
+            });
+
+            // this should not be called
+            server.get(
+                {
+                    url: "/redirected",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                },
+                {
+                    status: 200,
+                    body: "Invalid redirected content"
+                }
+            );
+            
+            server.get("/redirected", {
+                status: 200,
+                body: "Redirected content"
+            });
+
+            const response = await fetchMocker.fetch("/original", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ data: "test" })
+            });
+
+            assert.strictEqual(response.status, 200);
+            assert.strictEqual(await response.text(), "Redirected content");
+            assert.strictEqual(response.redirected, true);
+        });
+        
+        it("should delete the content-type header on 303 redirects with a body", async () => {
+            const server = new MockServer(API_URL);
+            const fetchMocker = new FetchMocker({
+                servers: [server],
+                baseUrl: API_URL,
+            });
+
+            server.put("/original", {
+                status: 303,
+                headers: {
+                    "Location": "/redirected"
+                }
+            });
+
+            // this should not be called
+            server.get(
+                {
+                    url: "/redirected",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                },
+                {
+                    status: 200,
+                    body: "Invalid redirected content"
+                }
+            );
+
+            server.get("/redirected", {
+                status: 200,
+                body: "Redirected content"
+            });
+
+            const response = await fetchMocker.fetch("/original", {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ data: "test" })
+            });
+
+            assert.strictEqual(response.status, 200);
+            assert.strictEqual(await response.text(), "Redirected content");
+            assert.strictEqual(response.redirected, true);
+        });
+        
+        it("should not change the method to GET on 307 redirects with a body", async () => {
+            const server = new MockServer(API_URL);
+            const fetchMocker = new FetchMocker({
+                servers: [server],
+                baseUrl: API_URL,
+            });
+
+            server.post("/original", {
+                status: 307,
+                headers: {
+                    "Location": "/redirected"
+                }
+            });
+
+            // Modify how we handle the body in the response handler
+            server.post(
+                {
+                    url: "/redirected",
+                    body: {
+                        "data": "test"
+                    }
+                },
+                {
+                    status: 200,
+                    body: "Got request with body: {\"data\":\"test\"}"
+                }
+            );
+
+            const response = await fetchMocker.fetch("/original", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ data: "test" })
+            });
+
+            assert.strictEqual(response.status, 200);
+            assert.strictEqual(await response.text(), "Got request with body: {\"data\":\"test\"}");
+            assert.strictEqual(response.redirected, true);
+        });
     });
 
     describe("Cross-Origin Redirects", () => {
