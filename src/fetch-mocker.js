@@ -3,6 +3,8 @@
  * @author Nicholas C. Zakas
  */
 
+/* globals Headers */
+
 //-----------------------------------------------------------------------------
 // Imports
 //-----------------------------------------------------------------------------
@@ -19,8 +21,15 @@ import {
 	CORS_ORIGIN,
 	createCorsPreflightError,
 	getUnsafeHeaders,
+	createCorsError,
 } from "./cors.js";
 import { createCustomRequest } from "./custom-request.js";
+import { 
+	isRedirectStatus, 
+	isBodylessMethod, 
+	isBodyPreservingRedirectStatus,
+	isRequestBodyHeader
+} from "./http.js";
 
 //-----------------------------------------------------------------------------
 // Type Definitions
@@ -130,6 +139,57 @@ function createOpaqueResponse(ResponseConstructor) {
 	});
 
 	return response;
+}
+
+/**
+ * Creates an opaque filtered redirect response.
+ * @param {typeof Response} ResponseConstructor The Response constructor to use
+ * @param {string} url The URL of the response
+ * @returns {Response} An opaque redirect response
+ */
+function createOpaqueRedirectResponse(ResponseConstructor, url) {
+	const response = new ResponseConstructor(null, {
+		status: 200, // Node.js doesn't accept 0 status, so use 200 then override it
+		statusText: "",
+		headers: {},
+	});
+
+	// Define non-configurable properties to match opaque redirect response behavior
+	Object.defineProperties(response, {
+		type: { value: "opaqueredirect", configurable: false },
+		url: { value: url, configurable: false },
+		ok: { value: false, configurable: false },
+		redirected: { value: false, configurable: false },
+		body: { value: null, configurable: false },
+		bodyUsed: { value: false, configurable: false },
+		status: { value: 0, configurable: false },
+	});
+
+	return response;
+}
+
+/**
+ * Checks if a redirect needs to adjust the request method and headers.
+ * @param {Request} request The original request
+ * @param {number} status The redirect status code
+ * @returns {boolean} True if the redirect needs to adjust the method
+ */
+function redirectNeedsAdjustment(request, status) {
+	
+	// For 303 redirects, change method to GET if it's not already GET or HEAD
+	return status === 303 && !isBodylessMethod(request.method) ||
+
+		// For 301/302 redirects, change method to GET if the original method was POST
+		(status === 301 || status === 302) && request.method === "POST";
+}
+
+/**
+ * Checks if a response is tainted (violates CORS)
+ * @param {Response} response The response to check
+ * @returns {boolean} True if the response is tainted
+ */
+function isTaintedResponse(response) {
+	return response.type.startsWith("opaque");
 }
 
 //-----------------------------------------------------------------------------
@@ -319,7 +379,8 @@ export class FetchMocker {
 
 			signal?.throwIfAborted();
 
-			return response;
+			// Process redirects
+			return this.#processRedirect(response, request, [], init?.body);
 		};
 	}
 
@@ -470,6 +531,133 @@ export class FetchMocker {
 		this.#corsPreflightData.set(preflightRequest.url, preflightData);
 
 		return preflightData;
+	}
+
+	/**
+	 * Processes a redirect response according to the fetch spec
+	 * @param {Response} response The response to check for a redirect
+	 * @param {Request} request The original request
+	 * @param {URL[]} urlList The list of URLs already visited in this redirect chain
+	 * @param {any} requestBody The body of the original request
+	 * @returns {Promise<Response>} The final response after any redirects
+	 * @see https://fetch.spec.whatwg.org/#http-redirect-fetch
+	 */
+	async #processRedirect(response, request, urlList = [], requestBody = null) {
+		// Add current URL to list
+		urlList.push(new URL(request.url));
+		
+		const isRedirect = isRedirectStatus(response.status);
+
+		// Process response based on redirect status and mode
+		if (!isRedirect) {
+			// Not a redirect - set redirected flag if we've had previous redirects
+			if (urlList.length > 1) {
+				Object.defineProperty(response, "redirected", { value: true });
+			}
+			return response;
+		}
+		
+		// Handle based on redirect mode
+		switch (request.redirect) {
+			case "manual":
+				// Return an opaque redirect response
+				return createOpaqueRedirectResponse(this.#Response, request.url);
+				
+			case "error":
+				// Just throw an error
+				throw new TypeError(`Redirect at ${request.url} was blocked due to redirect mode being 'error'`);
+				
+			case "follow":
+			default:
+				// Continue with redirect handling
+				break;
+		}
+		
+		// Get and validate the redirect location
+		const location = response.headers.get("Location");
+		if (!location) {
+			throw new TypeError(`Redirect at ${request.url} has no Location header`);
+		}
+
+		// Construct the new URL
+		let redirectUrl;
+		try {
+			redirectUrl = new URL(location, request.url);
+		} catch {
+			throw new TypeError(`Invalid redirect URL: ${location}`);
+		}
+
+		// Check for redirect loops
+		if (urlList.some(url => url.href === redirectUrl.href)) {
+			throw new TypeError(`Redirect loop detected for ${redirectUrl.href}`);
+		}
+
+		// Check redirect limit
+		if (urlList.length >= 20) {
+			throw new TypeError("Too many redirects (maximum is 20)");
+		}
+		
+		let method = request.method;
+		const headers = new Headers(request.headers);
+		
+		// If this is a redirect that changes the method, adjust accordingly
+		if (redirectNeedsAdjustment(request, response.status)) {
+			method = "GET";
+			
+			for (const header of headers.keys()) {
+				// Remove headers that should not be sent with GET requests
+				if (isRequestBodyHeader(header)) {
+					headers.delete(header);
+				}
+			}
+		}
+		
+		// Create a new request for the redirect
+		const init = {
+			method,
+			headers,
+			mode: request.mode,
+			credentials: request.credentials,
+			redirect: request.redirect,
+			referrer: request.referrer,
+			referrerPolicy: request.referrerPolicy,
+			signal: request.signal,
+			keepalive: request.keepalive,
+			body: null
+		};
+		
+		// Determine if we should preserve the body (307/308 redirects)
+		const preserveBodyStatus = isBodyPreservingRedirectStatus(response.status);
+		
+		if (preserveBodyStatus && requestBody !== null && !isBodylessMethod(method)) {
+			init.body = requestBody;
+		}
+
+		// Check if this is a cross-origin redirect
+		const currentOrigin = new URL(request.url).origin;
+		const isCrossOrigin = this.#baseUrl && 
+			redirectUrl.origin !== currentOrigin;
+
+		if (isCrossOrigin) {
+			// For non-same-origin redirect, remove authorization header
+			init.headers.delete("authorization");
+			
+			// For cross-origin redirect with credentials, check for CORS issues
+			if (request.credentials === "include" && !isTaintedResponse(response)) {
+				throw createCorsError(
+					redirectUrl.href,
+					this.#baseUrl?.origin || "",
+					"Cross-origin redirect with credentials is not allowed"
+				);
+			}
+		}
+
+		// Make the new request
+		const redirectRequest = new this.#Request(redirectUrl.href, init);
+		const redirectResponse = await this.#internalFetch(redirectRequest, init.body);
+		
+		// Process further redirects recursively
+		return this.#processRedirect(redirectResponse, redirectRequest, urlList, init.body);
 	}
 
 	// #region: Testing Helpers
