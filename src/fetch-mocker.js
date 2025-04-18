@@ -240,7 +240,110 @@ export class FetchMocker {
 	 * The created fetch function.
 	 * @type {typeof fetch}
 	 */
-	fetch;
+	fetch = (input, init) => this.#fetch(input, init);
+
+	/**
+	 * @type {typeof fetch}
+	 */
+  async #fetch(input, init) {
+    // first check to see if the request has been aborted
+    const signal = init?.signal;
+    signal?.throwIfAborted();
+
+    // TODO: For some reason this causes Mocha tests to fail with "multiple done"
+    // signal?.addEventListener("abort", () => {
+    // 	throw new Error("Fetch was aborted.");
+    // });
+
+    // adjust any relative URLs
+    const fixedInput =
+      typeof input === "string" && this.#baseUrl
+        ? new URL(input, this.#baseUrl).toString()
+        : input;
+
+    const request = new this.#Request(fixedInput, init);
+
+    let useCors = false;
+    let useCorsCredentials = false;
+    let preflightData;
+    let isSimpleRequest = false;
+
+    // if there's a base URL then we need to check for CORS
+    if (this.#baseUrl) {
+      const requestUrl = new URL(request.url);
+
+      if (isSameOrigin(requestUrl, this.#baseUrl)) {
+        // if we aren't explicitly blocking credentials then add them
+        if (request.credentials !== "omit") {
+          this.#attachCredentialsToRequest(request);
+        }
+      } else {
+        // check for same-origin mode
+        if (request.mode === "same-origin") {
+          throw new TypeError(
+            `Failed to fetch. Request mode is "same-origin" but the URL's origin is not same as the request origin ${this.#baseUrl.origin}`,
+          );
+        }
+
+        useCors = true;
+        isSimpleRequest = isCorsSimpleRequest(request);
+        const includeCredentials =
+          request.credentials === "include";
+
+        validateCorsRequest(request, this.#baseUrl.origin);
+
+        if (isSimpleRequest) {
+          if (includeCredentials) {
+            useCorsCredentials = true;
+            this.#attachCredentialsToRequest(request);
+          }
+        } else {
+          preflightData = await this.#preflightFetch(request);
+          preflightData.validate(request, this.#baseUrl.origin);
+
+          if (includeCredentials) {
+            if (!preflightData.allowCredentials) {
+              throw createCorsPreflightError(
+                request.url,
+                this.#baseUrl.origin,
+                "No 'Access-Control-Allow-Credentials' header is present on the requested resource.",
+              );
+            }
+
+            useCorsCredentials = true;
+            this.#attachCredentialsToRequest(request);
+          }
+        }
+
+        // add the origin header to the request
+        request.headers.append("origin", this.#baseUrl.origin);
+
+        // if the preflight response is successful, then we can make the actual request
+      }
+    }
+
+    signal?.throwIfAborted();
+
+    const response = await this.#internalFetch(request, init?.body);
+
+    if (useCors && this.#baseUrl) {
+      // handle no-cors mode for any cross-origin request
+      if (isSimpleRequest && request.mode === "no-cors") {
+        return createOpaqueResponse(this.#Response);
+      }
+
+      processCorsResponse(
+        response,
+        this.#baseUrl.origin,
+        useCorsCredentials,
+      );
+    }
+
+    signal?.throwIfAborted();
+
+    // Process redirects
+    return this.#processRedirect(response, request, [], init?.body);
+  };
 
 	/**
 	 * Map to store original fetch functions for objects
@@ -281,107 +384,6 @@ export class FetchMocker {
 				"Credentials can only be used with a base URL.",
 			);
 		}
-
-		// create the function here to bind to `this`
-		this.fetch = async (input, init) => {
-			// first check to see if the request has been aborted
-			const signal = init?.signal;
-			signal?.throwIfAborted();
-
-			// TODO: For some reason this causes Mocha tests to fail with "multiple done"
-			// signal?.addEventListener("abort", () => {
-			// 	throw new Error("Fetch was aborted.");
-			// });
-
-			// adjust any relative URLs
-			const fixedInput =
-				typeof input === "string" && this.#baseUrl
-					? new URL(input, this.#baseUrl).toString()
-					: input;
-
-			const request = new this.#Request(fixedInput, init);
-
-			let useCors = false;
-			let useCorsCredentials = false;
-			let preflightData;
-			let isSimpleRequest = false;
-
-			// if there's a base URL then we need to check for CORS
-			if (this.#baseUrl) {
-				const requestUrl = new URL(request.url);
-
-				if (isSameOrigin(requestUrl, this.#baseUrl)) {
-					// if we aren't explicitly blocking credentials then add them
-					if (request.credentials !== "omit") {
-						this.#attachCredentialsToRequest(request);
-					}
-				} else {
-					// check for same-origin mode
-					if (request.mode === "same-origin") {
-						throw new TypeError(
-							`Failed to fetch. Request mode is "same-origin" but the URL's origin is not same as the request origin ${this.#baseUrl.origin}`,
-						);
-					}
-
-					useCors = true;
-					isSimpleRequest = isCorsSimpleRequest(request);
-					const includeCredentials =
-						request.credentials === "include";
-
-					validateCorsRequest(request, this.#baseUrl.origin);
-
-					if (isSimpleRequest) {
-						if (includeCredentials) {
-							useCorsCredentials = true;
-							this.#attachCredentialsToRequest(request);
-						}
-					} else {
-						preflightData = await this.#preflightFetch(request);
-						preflightData.validate(request, this.#baseUrl.origin);
-
-						if (includeCredentials) {
-							if (!preflightData.allowCredentials) {
-								throw createCorsPreflightError(
-									request.url,
-									this.#baseUrl.origin,
-									"No 'Access-Control-Allow-Credentials' header is present on the requested resource.",
-								);
-							}
-
-							useCorsCredentials = true;
-							this.#attachCredentialsToRequest(request);
-						}
-					}
-
-					// add the origin header to the request
-					request.headers.append("origin", this.#baseUrl.origin);
-
-					// if the preflight response is successful, then we can make the actual request
-				}
-			}
-
-			signal?.throwIfAborted();
-
-			const response = await this.#internalFetch(request, init?.body);
-
-			if (useCors && this.#baseUrl) {
-				// handle no-cors mode for any cross-origin request
-				if (isSimpleRequest && request.mode === "no-cors") {
-					return createOpaqueResponse(this.#Response);
-				}
-
-				processCorsResponse(
-					response,
-					this.#baseUrl.origin,
-					useCorsCredentials,
-				);
-			}
-
-			signal?.throwIfAborted();
-
-			// Process redirects
-			return this.#processRedirect(response, request, [], init?.body);
-		};
 	}
 
 	/**
