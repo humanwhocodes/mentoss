@@ -61,14 +61,14 @@ export function createCustomRequest(RequestClass) {
 					writable: false,
 				});
 			}
-			
+
 			/*
 			 * Default setting for `redirect` is "follow" in the fetch API.
 			 * Not all runtimes follow the spec, so we need to ensure
 			 * that the `redirect` property is set correctly.
 			 */
 			const expectedRedirect = init?.redirect ?? "follow";
-			
+
 			if (expectedRedirect !== this.redirect) {
 				Object.defineProperty(this, "redirect", {
 					configurable: true,

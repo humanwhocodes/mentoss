@@ -73,9 +73,8 @@ describe("createCustomRequest()", () => {
 			}, /Header 'X-Custom-Header' is not allowed in 'no-cors' mode/);
 		});
 	});
-	
+
 	describe("redirect", () => {
-		
 		it("should have a default redirect mode of 'follow'", () => {
 			const request = new CustomRequest(TEST_URL);
 
