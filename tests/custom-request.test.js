@@ -73,6 +73,27 @@ describe("createCustomRequest()", () => {
 			}, /Header 'X-Custom-Header' is not allowed in 'no-cors' mode/);
 		});
 	});
+	
+	describe("redirect", () => {
+		
+		it("should have a default redirect mode of 'follow'", () => {
+			const request = new CustomRequest(TEST_URL);
+
+			assert.strictEqual(request.redirect, "follow");
+		});
+
+		it("should allow setting redirect mode to 'manual'", () => {
+			const request = new CustomRequest(TEST_URL, { redirect: "manual" });
+
+			assert.strictEqual(request.redirect, "manual");
+		});
+
+		it("should allow setting redirect mode to 'error'", () => {
+			const request = new CustomRequest(TEST_URL, { redirect: "error" });
+
+			assert.strictEqual(request.redirect, "error");
+		});
+	});
 
 	describe("clone()", () => {
 		it("should have the same class as the original request", () => {

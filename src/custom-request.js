@@ -61,6 +61,22 @@ export function createCustomRequest(RequestClass) {
 					writable: false,
 				});
 			}
+			
+			/*
+			 * Default setting for `redirect` is "follow" in the fetch API.
+			 * Not all runtimes follow the spec, so we need to ensure
+			 * that the `redirect` property is set correctly.
+			 */
+			const expectedRedirect = init?.redirect ?? "follow";
+			
+			if (expectedRedirect !== this.redirect) {
+				Object.defineProperty(this, "redirect", {
+					configurable: true,
+					enumerable: true,
+					value: expectedRedirect,
+					writable: false,
+				});
+			}
 
 			/*
 			 * Not all runtimes properly support the `credentials` property.
