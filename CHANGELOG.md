@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.0](https://github.com/humanwhocodes/mentoss/compare/mentoss-v0.9.2...mentoss-v0.10.0) (2025-04-22)
+
+
+### Features
+
+* Implement fetch redirects ([#98](https://github.com/humanwhocodes/mentoss/issues/98)) ([7515e1e](https://github.com/humanwhocodes/mentoss/commit/7515e1e88914d411201195018332e5afccfa18bb))
+
 ## [0.9.2](https://github.com/humanwhocodes/mentoss/compare/mentoss-v0.9.1...mentoss-v0.9.2) (2025-04-01)
 
 
