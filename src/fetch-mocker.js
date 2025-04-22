@@ -24,11 +24,11 @@ import {
 	createCorsError,
 } from "./cors.js";
 import { createCustomRequest } from "./custom-request.js";
-import { 
-	isRedirectStatus, 
-	isBodylessMethod, 
+import {
+	isRedirectStatus,
+	isBodylessMethod,
 	isBodyPreservingRedirectStatus,
-	isRequestBodyHeader
+	isRequestBodyHeader,
 } from "./http.js";
 
 //-----------------------------------------------------------------------------
@@ -175,12 +175,12 @@ function createOpaqueRedirectResponse(ResponseConstructor, url) {
  * @returns {boolean} True if the redirect needs to adjust the method
  */
 function redirectNeedsAdjustment(request, status) {
-	
 	// For 303 redirects, change method to GET if it's not already GET or HEAD
-	return status === 303 && !isBodylessMethod(request.method) ||
-
+	return (
+		(status === 303 && !isBodylessMethod(request.method)) ||
 		// For 301/302 redirects, change method to GET if the original method was POST
-		(status === 301 || status === 302) && request.method === "POST";
+		((status === 301 || status === 302) && request.method === "POST")
+	);
 }
 
 /**
@@ -240,7 +240,109 @@ export class FetchMocker {
 	 * The created fetch function.
 	 * @type {typeof fetch}
 	 */
-	fetch;
+	fetch = (input, init) => this.#fetch(input, init);
+
+	/**
+	 * @type {typeof fetch}
+	 */
+	async #fetch(input, init) {
+		// first check to see if the request has been aborted
+		const signal = init?.signal;
+		signal?.throwIfAborted();
+
+		// TODO: For some reason this causes Mocha tests to fail with "multiple done"
+		// signal?.addEventListener("abort", () => {
+		// 	throw new Error("Fetch was aborted.");
+		// });
+
+		// adjust any relative URLs
+		const fixedInput =
+			typeof input === "string" && this.#baseUrl
+				? new URL(input, this.#baseUrl).toString()
+				: input;
+
+		const request = new this.#Request(fixedInput, init);
+
+		let useCors = false;
+		let useCorsCredentials = false;
+		let preflightData;
+		let isSimpleRequest = false;
+
+		// if there's a base URL then we need to check for CORS
+		if (this.#baseUrl) {
+			const requestUrl = new URL(request.url);
+
+			if (isSameOrigin(requestUrl, this.#baseUrl)) {
+				// if we aren't explicitly blocking credentials then add them
+				if (request.credentials !== "omit") {
+					this.#attachCredentialsToRequest(request);
+				}
+			} else {
+				// check for same-origin mode
+				if (request.mode === "same-origin") {
+					throw new TypeError(
+						`Failed to fetch. Request mode is "same-origin" but the URL's origin is not same as the request origin ${this.#baseUrl.origin}`,
+					);
+				}
+
+				useCors = true;
+				isSimpleRequest = isCorsSimpleRequest(request);
+				const includeCredentials = request.credentials === "include";
+
+				validateCorsRequest(request, this.#baseUrl.origin);
+
+				if (isSimpleRequest) {
+					if (includeCredentials) {
+						useCorsCredentials = true;
+						this.#attachCredentialsToRequest(request);
+					}
+				} else {
+					preflightData = await this.#preflightFetch(request);
+					preflightData.validate(request, this.#baseUrl.origin);
+
+					if (includeCredentials) {
+						if (!preflightData.allowCredentials) {
+							throw createCorsPreflightError(
+								request.url,
+								this.#baseUrl.origin,
+								"No 'Access-Control-Allow-Credentials' header is present on the requested resource.",
+							);
+						}
+
+						useCorsCredentials = true;
+						this.#attachCredentialsToRequest(request);
+					}
+				}
+
+				// add the origin header to the request
+				request.headers.append("origin", this.#baseUrl.origin);
+
+				// if the preflight response is successful, then we can make the actual request
+			}
+		}
+
+		signal?.throwIfAborted();
+
+		const response = await this.#internalFetch(request, init?.body);
+
+		if (useCors && this.#baseUrl) {
+			// handle no-cors mode for any cross-origin request
+			if (isSimpleRequest && request.mode === "no-cors") {
+				return createOpaqueResponse(this.#Response);
+			}
+
+			processCorsResponse(
+				response,
+				this.#baseUrl.origin,
+				useCorsCredentials,
+			);
+		}
+
+		signal?.throwIfAborted();
+
+		// Process redirects
+		return this.#processRedirect(response, request, [], init?.body);
+	}
 
 	/**
 	 * Map to store original fetch functions for objects
@@ -281,107 +383,6 @@ export class FetchMocker {
 				"Credentials can only be used with a base URL.",
 			);
 		}
-
-		// create the function here to bind to `this`
-		this.fetch = async (input, init) => {
-			// first check to see if the request has been aborted
-			const signal = init?.signal;
-			signal?.throwIfAborted();
-
-			// TODO: For some reason this causes Mocha tests to fail with "multiple done"
-			// signal?.addEventListener("abort", () => {
-			// 	throw new Error("Fetch was aborted.");
-			// });
-
-			// adjust any relative URLs
-			const fixedInput =
-				typeof input === "string" && this.#baseUrl
-					? new URL(input, this.#baseUrl).toString()
-					: input;
-
-			const request = new this.#Request(fixedInput, init);
-
-			let useCors = false;
-			let useCorsCredentials = false;
-			let preflightData;
-			let isSimpleRequest = false;
-
-			// if there's a base URL then we need to check for CORS
-			if (this.#baseUrl) {
-				const requestUrl = new URL(request.url);
-
-				if (isSameOrigin(requestUrl, this.#baseUrl)) {
-					// if we aren't explicitly blocking credentials then add them
-					if (request.credentials !== "omit") {
-						this.#attachCredentialsToRequest(request);
-					}
-				} else {
-					// check for same-origin mode
-					if (request.mode === "same-origin") {
-						throw new TypeError(
-							`Failed to fetch. Request mode is "same-origin" but the URL's origin is not same as the request origin ${this.#baseUrl.origin}`,
-						);
-					}
-
-					useCors = true;
-					isSimpleRequest = isCorsSimpleRequest(request);
-					const includeCredentials =
-						request.credentials === "include";
-
-					validateCorsRequest(request, this.#baseUrl.origin);
-
-					if (isSimpleRequest) {
-						if (includeCredentials) {
-							useCorsCredentials = true;
-							this.#attachCredentialsToRequest(request);
-						}
-					} else {
-						preflightData = await this.#preflightFetch(request);
-						preflightData.validate(request, this.#baseUrl.origin);
-
-						if (includeCredentials) {
-							if (!preflightData.allowCredentials) {
-								throw createCorsPreflightError(
-									request.url,
-									this.#baseUrl.origin,
-									"No 'Access-Control-Allow-Credentials' header is present on the requested resource.",
-								);
-							}
-
-							useCorsCredentials = true;
-							this.#attachCredentialsToRequest(request);
-						}
-					}
-
-					// add the origin header to the request
-					request.headers.append("origin", this.#baseUrl.origin);
-
-					// if the preflight response is successful, then we can make the actual request
-				}
-			}
-
-			signal?.throwIfAborted();
-
-			const response = await this.#internalFetch(request, init?.body);
-
-			if (useCors && this.#baseUrl) {
-				// handle no-cors mode for any cross-origin request
-				if (isSimpleRequest && request.mode === "no-cors") {
-					return createOpaqueResponse(this.#Response);
-				}
-
-				processCorsResponse(
-					response,
-					this.#baseUrl.origin,
-					useCorsCredentials,
-				);
-			}
-
-			signal?.throwIfAborted();
-
-			// Process redirects
-			return this.#processRedirect(response, request, [], init?.body);
-		};
 	}
 
 	/**
@@ -542,10 +543,15 @@ export class FetchMocker {
 	 * @returns {Promise<Response>} The final response after any redirects
 	 * @see https://fetch.spec.whatwg.org/#http-redirect-fetch
 	 */
-	async #processRedirect(response, request, urlList = [], requestBody = null) {
+	async #processRedirect(
+		response,
+		request,
+		urlList = [],
+		requestBody = null,
+	) {
 		// Add current URL to list
 		urlList.push(new URL(request.url));
-		
+
 		const isRedirect = isRedirectStatus(response.status);
 
 		// Process response based on redirect status and mode
@@ -556,27 +562,34 @@ export class FetchMocker {
 			}
 			return response;
 		}
-		
+
 		// Handle based on redirect mode
 		switch (request.redirect) {
 			case "manual":
 				// Return an opaque redirect response
-				return createOpaqueRedirectResponse(this.#Response, request.url);
-				
+				return createOpaqueRedirectResponse(
+					this.#Response,
+					request.url,
+				);
+
 			case "error":
 				// Just throw an error
-				throw new TypeError(`Redirect at ${request.url} was blocked due to redirect mode being 'error'`);
-				
+				throw new TypeError(
+					`Redirect at ${request.url} was blocked due to redirect mode being 'error'`,
+				);
+
 			case "follow":
 			default:
 				// Continue with redirect handling
 				break;
 		}
-		
+
 		// Get and validate the redirect location
 		const location = response.headers.get("Location");
 		if (!location) {
-			throw new TypeError(`Redirect at ${request.url} has no Location header`);
+			throw new TypeError(
+				`Redirect at ${request.url} has no Location header`,
+			);
 		}
 
 		// Construct the new URL
@@ -589,21 +602,23 @@ export class FetchMocker {
 
 		// Check for redirect loops
 		if (urlList.some(url => url.href === redirectUrl.href)) {
-			throw new TypeError(`Redirect loop detected for ${redirectUrl.href}`);
+			throw new TypeError(
+				`Redirect loop detected for ${redirectUrl.href}`,
+			);
 		}
 
 		// Check redirect limit
 		if (urlList.length >= 20) {
 			throw new TypeError("Too many redirects (maximum is 20)");
 		}
-		
+
 		let method = request.method;
 		const headers = new Headers(request.headers);
-		
+
 		// If this is a redirect that changes the method, adjust accordingly
 		if (redirectNeedsAdjustment(request, response.status)) {
 			method = "GET";
-			
+
 			for (const header of headers.keys()) {
 				// Remove headers that should not be sent with GET requests
 				if (isRequestBodyHeader(header)) {
@@ -611,7 +626,7 @@ export class FetchMocker {
 				}
 			}
 		}
-		
+
 		// Create a new request for the redirect
 		const init = {
 			method,
@@ -623,41 +638,58 @@ export class FetchMocker {
 			referrerPolicy: request.referrerPolicy,
 			signal: request.signal,
 			keepalive: request.keepalive,
-			body: null
+			body: null,
 		};
-		
+
 		// Determine if we should preserve the body (307/308 redirects)
-		const preserveBodyStatus = isBodyPreservingRedirectStatus(response.status);
-		
-		if (preserveBodyStatus && requestBody !== null && !isBodylessMethod(method)) {
+		const preserveBodyStatus = isBodyPreservingRedirectStatus(
+			response.status,
+		);
+
+		if (
+			preserveBodyStatus &&
+			requestBody !== null &&
+			!isBodylessMethod(method)
+		) {
 			init.body = requestBody;
 		}
 
 		// Check if this is a cross-origin redirect
 		const currentOrigin = new URL(request.url).origin;
-		const isCrossOrigin = this.#baseUrl && 
-			redirectUrl.origin !== currentOrigin;
+		const isCrossOrigin =
+			this.#baseUrl && redirectUrl.origin !== currentOrigin;
 
 		if (isCrossOrigin) {
 			// For non-same-origin redirect, remove authorization header
 			init.headers.delete("authorization");
-			
+
 			// For cross-origin redirect with credentials, check for CORS issues
-			if (request.credentials === "include" && !isTaintedResponse(response)) {
+			if (
+				request.credentials === "include" &&
+				!isTaintedResponse(response)
+			) {
 				throw createCorsError(
 					redirectUrl.href,
 					this.#baseUrl?.origin || "",
-					"Cross-origin redirect with credentials is not allowed"
+					"Cross-origin redirect with credentials is not allowed",
 				);
 			}
 		}
 
 		// Make the new request
 		const redirectRequest = new this.#Request(redirectUrl.href, init);
-		const redirectResponse = await this.#internalFetch(redirectRequest, init.body);
-		
+		const redirectResponse = await this.#internalFetch(
+			redirectRequest,
+			init.body,
+		);
+
 		// Process further redirects recursively
-		return this.#processRedirect(redirectResponse, redirectRequest, urlList, init.body);
+		return this.#processRedirect(
+			redirectResponse,
+			redirectRequest,
+			urlList,
+			init.body,
+		);
 	}
 
 	// #region: Testing Helpers
