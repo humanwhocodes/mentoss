@@ -1,6 +1,6 @@
 {
   "name": "@humanwhocodes/mentoss",
-  "version": "0.9.2",
+  "version": "0.10.0",
   "exports": "./dist/index.js",
   "publish": {
     "include": [
