@@ -114,13 +114,14 @@ credentials.setCookie({
     name: "sessionId",
     value: "abc123",
     path: "/admin",      // defaults to "/"
+    sameSite: "none",    // defaults to "lax"
     secure: true,        // defaults to false
     httpOnly: true       // defaults to false
 });
 ```
 
 <Aside type="note">
-	Real cookies also allow you to specify an expiration date and the `HttpOnly` flag, but neither is useful for testing purposes and so are not supported.
+	Real cookies also allow you to specify an expiration date but that's not useful for testing purposes and so is not supported.
 </Aside>
 
 <Aside type="caution">
@@ -202,6 +203,7 @@ Cookies are included in requests based on these rules:
 1. The request domain must match or be a subdomain of the cookie's domain
 2. The request path must match or be under the cookie's path
 3. For secure cookies, the request must use HTTPS
+4. The request must match the cookie's `sameSite` policy (if set)
 
 For example:
 

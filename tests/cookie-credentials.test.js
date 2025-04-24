@@ -151,6 +151,60 @@ describe("CookieCredentials", () => {
 				}, /value is required/gi);
 			});
 		});
+
+		describe("with sameSite", () => {
+			it("should set a cookie with sameSite=strict", () => {
+				const credentials = new CookieCredentials(BASE_URL);
+				credentials.setCookie({
+					name: "session",
+					value: "123",
+					sameSite: "strict",
+				});
+			});
+
+			it("should set a cookie with sameSite=lax", () => {
+				const credentials = new CookieCredentials(BASE_URL);
+				credentials.setCookie({
+					name: "session",
+					value: "123",
+					sameSite: "lax",
+				});
+			});
+
+			it("should set a cookie with sameSite=none if secure=true", () => {
+				const credentials = new CookieCredentials(BASE_URL);
+				credentials.setCookie({
+					name: "session",
+					value: "123",
+					sameSite: "none",
+					secure: true,
+				});
+			});
+
+			it("should throw an error when sameSite=none without secure=true", () => {
+				const credentials = new CookieCredentials(BASE_URL);
+
+				assert.throws(() => {
+					credentials.setCookie({
+						name: "session",
+						value: "123",
+						sameSite: "none",
+					});
+				}, /SameSite=None requires Secure flag to be true/gi);
+			});
+
+			it("should throw an error with invalid sameSite value", () => {
+				const credentials = new CookieCredentials(BASE_URL);
+
+				assert.throws(() => {
+					credentials.setCookie({
+						name: "session",
+						value: "123",
+						sameSite: "invalid",
+					});
+				}, /Invalid sameSite value/gi);
+			});
+		});
 	});
 
 	describe("deleteCookie()", () => {
@@ -381,6 +435,86 @@ describe("CookieCredentials", () => {
 					new Request(BASE_URL),
 				);
 				assert.strictEqual(headers.get("Cookie"), null);
+			});
+		});
+
+		describe("with sameSite", () => {
+			it("should include cookie with sameSite=strict for same-origin requests", () => {
+				const credentials = new CookieCredentials(BASE_URL);
+				credentials.setCookie({
+					name: "session",
+					value: "123",
+					sameSite: "strict",
+				});
+
+				const request = new Request(BASE_URL);
+				const headers = credentials.getHeadersForRequest(request);
+				assert.strictEqual(headers.get("Cookie"), "session=123");
+			});
+
+			it("should not include cookie with sameSite=strict for cross-origin requests", () => {
+				const credentials = new CookieCredentials(BASE_URL);
+				credentials.setCookie({
+					name: "session",
+					value: "123",
+					sameSite: "strict",
+				});
+
+				const request = new Request(BASE_URL);
+				// Simulate a cross-origin request by adding an Origin header
+				request.headers.set("Origin", "https://different-origin.com");
+
+				const headers = credentials.getHeadersForRequest(request);
+				assert.strictEqual(headers.get("Cookie"), null);
+			});
+
+			it("should include cookie with sameSite=lax for cross-origin GET requests", () => {
+				const credentials = new CookieCredentials(BASE_URL);
+				credentials.setCookie({
+					name: "session",
+					value: "123",
+					sameSite: "lax",
+				});
+
+				const request = new Request(BASE_URL, { method: "GET" });
+				// Simulate a cross-origin request by adding an Origin header
+				request.headers.set("Origin", "https://different-origin.com");
+
+				const headers = credentials.getHeadersForRequest(request);
+				assert.strictEqual(headers.get("Cookie"), "session=123");
+			});
+
+			it("should not include cookie with sameSite=lax for cross-origin POST requests", () => {
+				const credentials = new CookieCredentials(BASE_URL);
+				credentials.setCookie({
+					name: "session",
+					value: "123",
+					sameSite: "lax",
+				});
+
+				const request = new Request(BASE_URL, { method: "POST" });
+				// Simulate a cross-origin request by adding an Origin header
+				request.headers.set("Origin", "https://different-origin.com");
+
+				const headers = credentials.getHeadersForRequest(request);
+				assert.strictEqual(headers.get("Cookie"), null);
+			});
+
+			it("should include cookie with sameSite=none for cross-origin requests", () => {
+				const credentials = new CookieCredentials(BASE_URL);
+				credentials.setCookie({
+					name: "session",
+					value: "123",
+					sameSite: "none",
+					secure: true,
+				});
+
+				const request = new Request(BASE_URL, { method: "POST" });
+				// Simulate a cross-origin request by adding an Origin header
+				request.headers.set("Origin", "https://different-origin.com");
+
+				const headers = credentials.getHeadersForRequest(request);
+				assert.strictEqual(headers.get("Cookie"), "session=123");
 			});
 		});
 	});

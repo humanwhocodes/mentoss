@@ -18,6 +18,10 @@ import { parseUrl } from "./util.js";
 /** @typedef {import("./types.js").Credentials} Credentials */
 
 /**
+ * @typedef {"strict"|"lax"|"none"} SameSiteType
+ */
+
+/**
  * @typedef {Object} CookieInfo
  * @property {string} name The name of the cookie.
  * @property {string} value The value of the cookie.
@@ -25,11 +29,14 @@ import { parseUrl } from "./util.js";
  * @property {string} [path] The path of the cookie.
  * @property {boolean} [secure] The secure flag of the cookie.
  * @property {boolean} [httpOnly] The HTTP-only flag of the cookie.
+ * @property {SameSiteType} [sameSite] The SameSite attribute of the cookie.
  */
 
 //-----------------------------------------------------------------------------
 // Helpers
 //-----------------------------------------------------------------------------
+
+const sameSiteValues = new Set(["strict", "lax", "none"]);
 
 /**
  * Asserts that a string is a valid domain that does not include a protocol or path.
@@ -44,6 +51,23 @@ function assertValidDomain(domain) {
 	const domainPattern = /^(?!:\/\/)([a-zA-Z0-9-_]+\.)+[a-zA-Z]{2,}$/;
 	if (!domainPattern.test(domain)) {
 		throw new TypeError(`Invalid domain: ${domain}`);
+	}
+}
+
+/**
+ * Asserts that a string is a valid SameSite value and that the security requirements are met.
+ * @param {SameSiteType|undefined} sameSite The SameSite value to verify.
+ * @param {boolean} secure The secure flag of the cookie.
+ * @throws {TypeError} If the SameSite value is not valid or if SameSite=None without Secure.
+ */
+function assertValidSameSite(sameSite, secure) {
+	if (sameSite && !sameSiteValues.has(sameSite)) {
+		throw new TypeError(`Invalid sameSite value: ${sameSite}`);
+	}
+
+	// If sameSite is "none", secure must be true
+	if (sameSite === "none" && !secure) {
+		throw new TypeError(`SameSite=None requires Secure flag to be true`);
 	}
 }
 
@@ -89,6 +113,12 @@ class Cookie {
 	httpOnly;
 
 	/**
+	 * The SameSite attribute of the cookie.
+	 * @type {SameSiteType}
+	 */
+	sameSite;
+
+	/**
 	 * Creates a new CookieData instance.
 	 * @param {Object} options The options for the cookie.
 	 * @param {string} options.name The name of the cookie.
@@ -97,6 +127,7 @@ class Cookie {
 	 * @param {string} [options.path=""] The path of the cookie.
 	 * @param {boolean} [options.secure=false] The secure flag of the cookie.
 	 * @param {boolean} [options.httpOnly=false] The HTTP-only flag of the cookie.
+	 * @param {SameSiteType} [options.sameSite="lax"] The SameSite attribute of the cookie.
 	 */
 	constructor({
 		name,
@@ -105,6 +136,7 @@ class Cookie {
 		path = "/",
 		secure = false,
 		httpOnly = false,
+		sameSite = "lax",
 	}) {
 		assertValidDomain(domain);
 
@@ -116,12 +148,15 @@ class Cookie {
 			throw new TypeError("Cookie value is required.");
 		}
 
+		assertValidSameSite(sameSite, secure);
+
 		this.name = name;
 		this.value = value;
 		this.domain = /** @type {string} */ (domain);
 		this.path = path;
 		this.secure = secure;
 		this.httpOnly = httpOnly;
+		this.sameSite = sameSite;
 	}
 
 	/**
@@ -142,11 +177,58 @@ class Cookie {
 	isCredentialForRequest(request) {
 		const url = parseUrl(request.url);
 
-		return (
+		// Basic checks for domain, path, and secure flag
+		const basicChecks =
 			url.hostname.endsWith(this.domain) &&
 			url.pathname.startsWith(this.path) &&
-			(this.secure ? url.protocol === "https:" : true)
-		);
+			(this.secure ? url.protocol === "https:" : true);
+
+		if (!basicChecks) {
+			return false;
+		}
+
+		// Check SameSite attribute
+		if (this.sameSite) {
+			const requestOrigin = request.headers?.get("Origin");
+
+			switch (this.sameSite) {
+				case "strict":
+					// Only send cookie if the request came from the same origin
+					if (requestOrigin && requestOrigin !== url.origin) {
+						return false;
+					}
+					break;
+
+				case "lax":
+					// Permit cookies for navigation to top-level document via "safe" methods
+					// For simplicity, we'll only block cross-origin non-GET requests in Lax mode
+					if (
+						requestOrigin &&
+						requestOrigin !== url.origin &&
+						request.method !== "GET"
+					) {
+						return false;
+					}
+					break;
+
+				case "none":
+					// Allow cross-origin requests, but cookie must be Secure
+					// We already validated secure flag in the constructor
+					break;
+
+				default:
+					// Default to Lax behavior
+					if (
+						requestOrigin &&
+						requestOrigin !== url.origin &&
+						request.method !== "GET"
+					) {
+						return false;
+					}
+			}
+		}
+
+		return true;
 	}
 
 	/**
@@ -170,6 +252,10 @@ class Cookie {
 
 		if (this.path) {
 			cookieString += `; Path=${this.path}`;
+		}
+
+		if (this.sameSite) {
+			cookieString += `; SameSite=${this.sameSite}`;
 		}
 
 		if (this.secure) {
