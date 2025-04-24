@@ -28,7 +28,6 @@ import { parseUrl } from "./util.js";
  * @property {string} [domain] The domain of the cookie.
  * @property {string} [path] The path of the cookie.
  * @property {boolean} [secure] The secure flag of the cookie.
- * @property {boolean} [httpOnly] The HTTP-only flag of the cookie.
  * @property {SameSiteType} [sameSite] The SameSite attribute of the cookie.
  */
 
@@ -107,12 +106,6 @@ class Cookie {
 	secure;
 
 	/**
-	 * The HTTP-only flag of the cookie.
-	 * @type {boolean}
-	 */
-	httpOnly;
-
-	/**
 	 * The SameSite attribute of the cookie.
 	 * @type {SameSiteType}
 	 */
@@ -124,9 +117,8 @@ class Cookie {
 	 * @param {string} options.name The name of the cookie.
 	 * @param {string} options.value The value of the cookie.
 	 * @param {string|undefined} options.domain The domain of the cookie.
-	 * @param {string} [options.path=""] The path of the cookie.
+	 * @param {string} [options.path="/"] The path of the cookie.
 	 * @param {boolean} [options.secure=false] The secure flag of the cookie.
-	 * @param {boolean} [options.httpOnly=false] The HTTP-only flag of the cookie.
 	 * @param {SameSiteType} [options.sameSite="lax"] The SameSite attribute of the cookie.
 	 */
 	constructor({
@@ -135,7 +127,6 @@ class Cookie {
 		domain,
 		path = "/",
 		secure = false,
-		httpOnly = false,
 		sameSite = "lax",
 	}) {
 		assertValidDomain(domain);
@@ -155,7 +146,6 @@ class Cookie {
 		this.domain = /** @type {string} */ (domain);
 		this.path = path;
 		this.secure = secure;
-		this.httpOnly = httpOnly;
 		this.sameSite = sameSite;
 	}
 
@@ -260,10 +250,6 @@ class Cookie {
 
 		if (this.secure) {
 			cookieString += `; Secure`;
-		}
-
-		if (this.httpOnly) {
-			cookieString += `; HttpOnly`;
 		}
 
 		return cookieString + "]";

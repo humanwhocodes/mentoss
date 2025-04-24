@@ -115,13 +115,12 @@ credentials.setCookie({
     value: "abc123",
     path: "/admin",      // defaults to "/"
     sameSite: "none",    // defaults to "lax"
-    secure: true,        // defaults to false
-    httpOnly: true       // defaults to false
+    secure: true         // defaults to false
 });
 ```
 
 <Aside type="note">
-	Real cookies also allow you to specify an expiration date but that's not useful for testing purposes and so is not supported.
+	Real cookies also allow you to specify an expiration date and `HttpOnly` flag, but neither is useful for testing purposes and so are not supported.
 </Aside>
 
 <Aside type="caution">
