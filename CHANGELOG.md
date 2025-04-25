@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.11.0](https://github.com/humanwhocodes/mentoss/compare/mentoss-v0.10.0...mentoss-v0.11.0) (2025-04-24)
+
+
+### Features
+
+* Implement SameSite for cookies ([#100](https://github.com/humanwhocodes/mentoss/issues/100)) ([fb96bf1](https://github.com/humanwhocodes/mentoss/commit/fb96bf11f168674fd73ebc2a8e4cd5453237351f))
+
+
+### Bug Fixes
+
+* Remove unused HttpOnly flag for cookies ([fc7bb10](https://github.com/humanwhocodes/mentoss/commit/fc7bb1011a98e576038a603c3a8123667e391d2c))
+
 ## [0.10.0](https://github.com/humanwhocodes/mentoss/compare/mentoss-v0.9.2...mentoss-v0.10.0) (2025-04-22)
 
 
