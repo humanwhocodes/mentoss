@@ -1287,6 +1287,55 @@ describe("MockServer", () => {
 		});
 	});
 
+	describe("traceCalled() and called()", () => {
+		it("should return trace info for called routes and match correctly", async () => {
+			server.get("/foo", { status: 200, body: "foo" });
+			server.get("/bar", { status: 200, body: "bar" });
+
+			// Call /foo
+			await server.receive(
+				createRequest({ method: "GET", url: `${BASE_URL}/foo` }),
+			);
+
+			// Only /foo should be in called routes
+			const fooResult = server.traceCalled({
+				method: "GET",
+				url: `${BASE_URL}/foo`,
+			});
+			assert.ok(Array.isArray(fooResult.traces));
+			assert.strictEqual(fooResult.traces.length, 0); // Because match found, traces is empty
+			assert.strictEqual(fooResult.matched, true);
+
+			const barResult = server.traceCalled({
+				method: "GET",
+				url: `${BASE_URL}/bar`,
+			});
+			assert.ok(Array.isArray(barResult.traces));
+			assert.ok(barResult.traces.length > 0);
+			assert.strictEqual(barResult.matched, false);
+			// At least one trace should have .matches === false
+			assert.ok(barResult.traces.some(trace => trace.matches === false));
+
+			// called() returns true for /foo, false for /bar
+			assert.strictEqual(
+				server.called({ method: "GET", url: `${BASE_URL}/foo` }),
+				true,
+			);
+			assert.strictEqual(
+				server.called({ method: "GET", url: `${BASE_URL}/bar` }),
+				false,
+			);
+		});
+
+		it("should throw if called() is used when no routes have been called", () => {
+			server.get("/foo", { status: 200, body: "foo" });
+			server.clear();
+			assert.throws(() => {
+				server.called({ method: "GET", url: `${BASE_URL}/foo` });
+			}, /This request pattern doesn't match any registered routes/);
+		});
+	});
+
 	describe("allRoutesCalled()", () => {
 		it("should return true when all routes have been called", async () => {
 			server.get("/test", { status: 200, body: "OK" });

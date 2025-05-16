@@ -576,11 +576,12 @@ export class MockServer {
 	// #region Testing Helpers
 
 	/**
-	 * Determines if a route has been called.
+	 * Traces the details of called routes to see if any match the given request pattern.
+	 * For each called route, collects trace information. If no match is found in called routes, also checks unmatched routes.
 	 * @param {RequestPattern|string} request The request pattern to check.
-	 * @returns {boolean} `true` if the route was called, `false` if not.
+	 * @returns {{traces: Array<Trace>, matched: boolean}} Trace results and match status.
 	 */
-	called(request) {
+	traceCalled(request) {
 		const requestPattern =
 			typeof request === "string"
 				? { method: "GET", url: request }
@@ -588,12 +589,46 @@ export class MockServer {
 
 		assertValidRequestPattern(requestPattern);
 
-		// if the URL doesn't being with the baseUrl then add it
+		// if the URL doesn't begin with the baseUrl then add it
 		if (!requestPattern.url.startsWith(this.baseUrl)) {
 			requestPattern.url = new URL(requestPattern.url, this.baseUrl).href;
 		}
 
-		return this.#matchedRoutes.some(route => route.matches(requestPattern));
+		const traces = [];
+		const matchedRoutes = this.#matchedRoutes;
+		const unmatchedRoutes = this.#unmatchedRoutes;
+
+		for (const route of matchedRoutes) {
+			const trace = route.traceMatches(requestPattern);
+			if (trace.matches) {
+				// Immediately return: match found, so traces is empty and matched is true
+				return { traces: [], matched: true };
+			}
+			traces.push({ ...trace, title: route.toString() });
+		}
+
+		for (const route of unmatchedRoutes) {
+			const trace = route.traceMatches(requestPattern);
+			traces.push({ ...trace, title: route.toString() });
+		}
+
+		return { traces, matched: false };
+	}
+
+	/**
+	 * Determines if a route has been called.
+	 * @param {RequestPattern|string} request The request pattern to check.
+	 * @returns {boolean} `true` if the route was called, `false` if not.
+	 * @throws {Error} If both matched is false and traces is an empty array.
+	 */
+	called(request) {
+		const { traces, matched } = this.traceCalled(request);
+		if (!matched && traces.length === 0) {
+			throw new Error(
+				"This request pattern doesn't match any registered routes.",
+			);
+		}
+		return matched;
 	}
 
 	/**
