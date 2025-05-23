@@ -10,7 +10,7 @@
 //-----------------------------------------------------------------------------
 
 import assert from "node:assert";
-import { stringifyRequest, getBody } from "../src/util.js";
+import { stringifyRequest, getBody, NoRouteMatchedError } from "../src/util.js";
 
 //-----------------------------------------------------------------------------
 // Tests
@@ -183,6 +183,89 @@ Content-Type: application/octet-stream
 			const body = await getBody(request);
 			assert(body instanceof ArrayBuffer);
 			assert.strictEqual(body.byteLength, 8);
+		});
+	});
+
+	describe("NoRouteMatchedError", () => {
+		it("should create an error with the correct message for no partial matches", () => {
+			const request = new Request("https://example.com", {
+				method: "GET",
+			});
+			const body = null;
+			const traces = [];
+
+			const error = new NoRouteMatchedError(request, body, traces);
+
+			assert.strictEqual(error.name, "NoRouteMatchedError");
+			assert.ok(
+				error.message.includes(
+					"No route matched for GET https://example.com/",
+				),
+			);
+			assert.ok(error.message.includes("No partial matches found."));
+			assert.strictEqual(error.request, request);
+			assert.strictEqual(error.body, body);
+			assert.deepStrictEqual(error.traces, traces);
+		});
+
+		it("should create an error with the correct message for partial matches", () => {
+			const request = new Request("https://example.com/users/123", {
+				method: "GET",
+			});
+			const body = null;
+			const traces = [
+				{
+					title: "Route 1",
+					messages: ["Message 1", "Message 2"],
+				},
+				{
+					title: "Route 2",
+					messages: ["Message 3", "Message 4"],
+				},
+			];
+
+			const error = new NoRouteMatchedError(request, body, traces);
+
+			assert.strictEqual(error.name, "NoRouteMatchedError");
+			assert.ok(
+				error.message.includes(
+					"No route matched for GET https://example.com/users/123",
+				),
+			);
+			assert.ok(error.message.includes("Partial matches:"));
+			assert.ok(error.message.includes("Route 1:"));
+			assert.ok(error.message.includes("  Message 1"));
+			assert.ok(error.message.includes("  Message 2"));
+			assert.ok(error.message.includes("Route 2:"));
+			assert.ok(error.message.includes("  Message 3"));
+			assert.ok(error.message.includes("  Message 4"));
+			assert.strictEqual(error.request, request);
+			assert.strictEqual(error.body, body);
+			assert.deepStrictEqual(error.traces, traces);
+		});
+
+		it("should create an error with the correct message when body is provided", () => {
+			const request = new Request("https://example.com", {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+			});
+			const body = { name: "value" };
+			const traces = [];
+
+			const error = new NoRouteMatchedError(request, body, traces);
+
+			assert.strictEqual(error.name, "NoRouteMatchedError");
+			assert.ok(
+				error.message.includes(
+					"No route matched for POST https://example.com/",
+				),
+			);
+			assert.ok(error.message.includes('{"name":"value"}'));
+			assert.strictEqual(error.request, request);
+			assert.strictEqual(error.body, body);
+			assert.deepStrictEqual(error.traces, traces);
 		});
 	});
 });

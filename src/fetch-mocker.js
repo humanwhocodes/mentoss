@@ -9,7 +9,7 @@
 // Imports
 //-----------------------------------------------------------------------------
 
-import { stringifyRequest } from "./util.js";
+import { NoRouteMatchedError } from "./util.js";
 import {
 	isCorsSimpleRequest,
 	CorsPreflightData,
@@ -43,38 +43,6 @@ import {
 //-----------------------------------------------------------------------------
 // Helpers
 //-----------------------------------------------------------------------------
-
-/**
- * Formats a message for when no route is matched.
- * @param {Request} request The request that wasn't matched.
- * @param {string|any|FormData|null} body The body of the request.
- * @param {Trace[]} traces The traces from the servers.
- * @returns {string} The formatted message.
- */
-function formatNoRouteMatchedMessage(request, body, traces) {
-	return `No route matched for ${request.method} ${request.url}.
-
-Full Request:
-
-${stringifyRequest(request, body)}
-
-${
-	traces.length === 0
-		? "No partial matches found."
-		: "Partial matches:\n\n" +
-			traces
-				.map(trace => {
-					let traceMessage = `${trace.title}:`;
-
-					trace.messages.forEach(message => {
-						traceMessage += `\n  ${message}`;
-					});
-
-					return traceMessage;
-				})
-				.join("\n\n")
-}`;
-}
 
 /**
  * Creates a base URL from a URL or string. This is also validates
@@ -451,9 +419,7 @@ export class FetchMocker {
 		);
 
 		// throw an error saying the route wasn't matched
-		throw new Error(
-			formatNoRouteMatchedMessage(request, body, possibleTraces),
-		);
+		throw new NoRouteMatchedError(request, body, possibleTraces);
 	}
 
 	/**
