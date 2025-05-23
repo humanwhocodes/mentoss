@@ -255,7 +255,7 @@ describe("FetchMocker", () => {
 		});
 
 		await assert.rejects(fetchMocker.fetch(API_URL + "/goodbye"), {
-			name: "Error",
+			name: "NoRouteMatchedError",
 			message: NO_ROUTE_MATCHED_NO_PARTIAL_MATCHES,
 		});
 	});
@@ -283,7 +283,7 @@ describe("FetchMocker", () => {
 		);
 
 		await assert.rejects(fetchMocker.fetch(API_URL + "/user/settings"), {
-			name: "Error",
+			name: "NoRouteMatchedError",
 			message: NO_ROUTE_MATCHED_TWO_PARTIAL_MATCHES,
 		});
 	});
@@ -321,7 +321,7 @@ describe("FetchMocker", () => {
 				body: JSON.stringify({ name: "value" }),
 			}),
 			{
-				name: "Error",
+				name: "NoRouteMatchedError",
 				message: NO_ROUTE_MATCHED_HEADERS_BODY,
 			},
 		);

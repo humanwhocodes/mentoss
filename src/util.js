@@ -71,6 +71,48 @@ export class URLParseError extends Error {
 }
 
 /**
+ * Represents an error that occurs when no route matched a request.
+ * @extends {Error}
+ */
+export class NoRouteMatchedError extends Error {
+	/**
+	 * Creates a new NoRouteMatchedError instance.
+	 * @param {Request} request The request that wasn't matched.
+	 * @param {string|any|FormData|null} body The body of the request.
+	 * @param {Array<{title: string, messages: Array<string>}>} traces The traces from the servers.
+	 */
+	constructor(request, body, traces) {
+		const message = `No route matched for ${request.method} ${request.url}.
+
+Full Request:
+
+${stringifyRequest(request, body)}
+
+${
+	traces.length === 0
+		? "No partial matches found."
+		: "Partial matches:\n\n" +
+			traces
+				.map(trace => {
+					let traceMessage = `${trace.title}:`;
+
+					trace.messages.forEach(message => {
+						traceMessage += `\n  ${message}`;
+					});
+
+					return traceMessage;
+				})
+				.join("\n\n")
+}`;
+		super(message);
+		this.name = "NoRouteMatchedError";
+		this.request = request;
+		this.body = body;
+		this.traces = traces;
+	}
+}
+
+/**
  * Parses a URL and returns a URL object. This is used instead
  * of the URL constructor to provide a standard error message,
  * because different runtimes use different messages.
