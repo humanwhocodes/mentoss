@@ -576,11 +576,11 @@ export class MockServer {
 	// #region Testing Helpers
 
 	/**
-	 * Determines if a route has been called.
+	 * Traces the details of a request pattern to see if it matches any routes.
 	 * @param {RequestPattern|string} request The request pattern to check.
-	 * @returns {boolean} `true` if the route was called, `false` if not.
+	 * @returns {{traces:Array<Trace>, matched:boolean}} The trace result with match status.
 	 */
-	called(request) {
+	traceCalled(request) {
 		const requestPattern =
 			typeof request === "string"
 				? { method: "GET", url: request }
@@ -588,12 +588,87 @@ export class MockServer {
 
 		assertValidRequestPattern(requestPattern);
 
-		// if the URL doesn't being with the baseUrl then add it
+		// if the URL doesn't begin with the baseUrl then add it
 		if (!requestPattern.url.startsWith(this.baseUrl)) {
 			requestPattern.url = new URL(requestPattern.url, this.baseUrl).href;
 		}
 
-		return this.#matchedRoutes.some(route => route.matches(requestPattern));
+		// First check if any matched routes match
+		const matchedRoutes = this.#matchedRoutes;
+		for (let i = 0; i < matchedRoutes.length; i++) {
+			const route = matchedRoutes[i];
+			if (route.matches(requestPattern)) {
+				return { traces: [], matched: true };
+			}
+		}
+
+		// If no matched routes match, collect traces from all routes
+		const allTraces = [];
+
+		// First collect traces from matched routes
+		for (let i = 0; i < matchedRoutes.length; i++) {
+			const route = matchedRoutes[i];
+			const trace = route.traceMatches(requestPattern);
+			trace.messages.push("❌ Route was already called.");
+			allTraces.push({ ...trace, title: route.toString() });
+		}
+
+		// Then collect traces from unmatched routes
+		const unmatchedRoutes = this.#unmatchedRoutes;
+		for (let i = 0; i < unmatchedRoutes.length; i++) {
+			const route = unmatchedRoutes[i];
+			const trace = route.traceMatches(requestPattern);
+			allTraces.push({ ...trace, title: route.toString() });
+		}
+
+		// Filter out traces that only have basic URL mismatch (single message)
+		// to focus on meaningful partial matches
+		const meaningfulTraces = allTraces.filter(
+			trace => trace.messages.length > 1,
+		);
+
+		return { traces: meaningfulTraces, matched: false };
+	}
+
+	/**
+	 * Determines if a route has been called.
+	 * @param {RequestPattern|string} request The request pattern to check.
+	 * @returns {boolean} `true` if the route was called, `false` if not.
+	 * @throws {Error} If the request pattern doesn't match any registered routes.
+	 */
+	called(request) {
+		const { traces, matched } = this.traceCalled(request);
+
+		if (matched) {
+			return true;
+		}
+
+		if (traces.length > 0) {
+			return false;
+		}
+
+		// No routes match this pattern at all, so throw an error
+		// We need to create a minimal Request-like object for the error
+		const requestPattern =
+			typeof request === "string"
+				? { method: "GET", url: request }
+				: request;
+
+		assertValidRequestPattern(requestPattern);
+
+		// if the URL doesn't begin with the baseUrl then add it
+		if (!requestPattern.url.startsWith(this.baseUrl)) {
+			requestPattern.url = new URL(requestPattern.url, this.baseUrl).href;
+		}
+
+		// Create a minimal Request-like object for the error
+		const mockRequest = {
+			method: requestPattern.method,
+			url: requestPattern.url,
+			headers: new Headers(requestPattern.headers || {}),
+		};
+
+		throw new Error("This request pattern doesn't match any registered routes.");
 	}
 
 	/**

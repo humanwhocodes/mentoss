@@ -1285,6 +1285,115 @@ describe("MockServer", () => {
 			await server.receive(request);
 			assert.strictEqual(server.called("/test"), false);
 		});
+
+		it("should throw an error when request pattern doesn't match any registered routes", () => {
+			server.get("/test", { status: 200, body: "OK" });
+			
+			assert.throws(() => {
+				server.called("/nonexistent");
+			}, /This request pattern doesn't match any registered routes/);
+		});
+
+		it("should return false when request pattern method doesn't match any registered routes", () => {
+			server.get("/test", { status: 200, body: "OK" });
+			
+			// URL pattern exists but method doesn't match, so should return false
+			assert.strictEqual(server.called({ method: "DELETE", url: "/test" }), false);
+		});
+
+		it("should throw an error when no routes are registered", () => {
+			assert.throws(() => {
+				server.called("/test");
+			}, /This request pattern doesn't match any registered routes/);
+		});
+	});
+
+	describe("traceCalled()", () => {
+		it("should return matched true with empty traces when a called route matches", async () => {
+			server.get("/test", { status: 200, body: "OK" });
+			const request = createRequest({
+				method: "GET",
+				url: `${BASE_URL}/test`,
+			});
+
+			await server.receive(request);
+			const result = server.traceCalled("/test");
+			
+			assert.strictEqual(result.matched, true);
+			assert.deepStrictEqual(result.traces, []);
+		});
+
+		it("should return matched false with traces when no called routes match but registered routes exist", () => {
+			server.get("/test", { status: 200, body: "OK" });
+			server.post("/test", { status: 201, body: "Created" });
+			
+			// Testing with DELETE /test - this should match the URL pattern but not the method
+			const result = server.traceCalled({ method: "DELETE", url: "/test" });
+			
+			assert.strictEqual(result.matched, false);
+			assert.strictEqual(result.traces.length, 2);
+			assert.ok(result.traces[0].title.includes("GET"));
+			assert.ok(result.traces[1].title.includes("POST"));
+		});
+
+		it("should return matched false with empty traces when no routes are registered", () => {
+			const result = server.traceCalled("/test");
+			
+			assert.strictEqual(result.matched, false);
+			assert.deepStrictEqual(result.traces, []);
+		});
+
+		it("should include 'Route was already called' message in traces for called routes", async () => {
+			server.get("/test", { status: 200, body: "OK" });
+			server.post("/test", { status: 201, body: "Created" });
+			const request = createRequest({
+				method: "GET",
+				url: `${BASE_URL}/test`,
+			});
+
+			await server.receive(request);
+			const result = server.traceCalled({ method: "POST", url: "/test" });
+			
+			assert.strictEqual(result.matched, false);
+			assert.strictEqual(result.traces.length, 2);
+			
+			// The called route should have the "already called" message
+			const calledRouteTrace = result.traces.find(trace => 
+				trace.title.includes("GET") && trace.messages.includes("❌ Route was already called.")
+			);
+			assert.ok(calledRouteTrace, "Should find called route with 'already called' message");
+			
+			// The uncalled route should not have the "already called" message
+			const uncalledRouteTrace = result.traces.find(trace => 
+				trace.title.includes("POST") && !trace.messages.includes("❌ Route was already called.")
+			);
+			assert.ok(uncalledRouteTrace, "Should find uncalled route without 'already called' message");
+		});
+
+		it("should handle string requests correctly", () => {
+			server.get("/test", { status: 200, body: "OK" });
+			
+			const result = server.traceCalled("/test");
+			
+			assert.strictEqual(result.matched, false);
+			assert.strictEqual(result.traces.length, 1);
+			assert.ok(result.traces[0].title.includes("GET"));
+			assert.ok(result.traces[0].title.includes("/test"));
+		});
+
+		it("should handle object request patterns correctly", () => {
+			server.post("/api/users", { status: 201, body: "Created" });
+			
+			const result = server.traceCalled({
+				method: "POST",
+				url: "/api/users",
+			});
+			
+			assert.strictEqual(result.matched, false);
+			assert.strictEqual(result.traces.length, 1);
+			assert.ok(result.traces[0].title.includes("POST"));
+			assert.ok(result.traces[0].title.includes("/api/users"));
+		});
 	});
 
 	describe("allRoutesCalled()", () => {

@@ -96,6 +96,16 @@ console.log(server.called({
 
 In this example, the `called()` method returns `false` because the `/users` route has not been called yet. The matching is done using the same comparison logic as if a `fetch()` request was made to the route.
 
+**Error Handling**: The `called()` method will throw an error if the request pattern doesn't match any registered routes. This helps identify typos in test URLs:
+
+```js
+server.get("/users", 200);
+
+server.called("/users");     // false - route exists but not called
+server.called("/user");      // throws error - no route matches this pattern
+server.called("/nonexistent"); // throws error - no route matches this pattern
+```
+
 ### `uncalledRoutes`
 
 The `uncalledRoutes` property returns an array with information about uncalled routes. You can use this property to check if any routes have not been called:
