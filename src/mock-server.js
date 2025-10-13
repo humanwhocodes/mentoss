@@ -3,7 +3,7 @@
  * @author Nicholas C. Zakas
  */
 
-/* global Response, FormData, setTimeout */
+/* global Request, Response, Headers, FormData, setTimeout */
 
 //-----------------------------------------------------------------------------
 // Imports
@@ -11,7 +11,7 @@
 
 import { RequestMatcher } from "./request-matcher.js";
 import { statusTexts } from "./http.js";
-import { getBody } from "./util.js";
+import { getBody, NoRouteMatchedError } from "./util.js";
 
 //-----------------------------------------------------------------------------
 // Type Definitions
@@ -576,11 +576,11 @@ export class MockServer {
 	// #region Testing Helpers
 
 	/**
-	 * Determines if a route has been called.
+	 * Traces the details of a request pattern to see if it matches any routes.
 	 * @param {RequestPattern|string} request The request pattern to check.
-	 * @returns {boolean} `true` if the route was called, `false` if not.
+	 * @returns {{traces:Array<Trace>, matched:boolean}} The trace result with match status.
 	 */
-	called(request) {
+	traceCalled(request) {
 		const requestPattern =
 			typeof request === "string"
 				? { method: "GET", url: request }
@@ -588,12 +588,90 @@ export class MockServer {
 
 		assertValidRequestPattern(requestPattern);
 
-		// if the URL doesn't being with the baseUrl then add it
+		// if the URL doesn't begin with the baseUrl then add it
 		if (!requestPattern.url.startsWith(this.baseUrl)) {
 			requestPattern.url = new URL(requestPattern.url, this.baseUrl).href;
 		}
 
-		return this.#matchedRoutes.some(route => route.matches(requestPattern));
+		const allTraces = [];
+
+		// Check matched routes and collect traces in a single pass
+		const matchedRoutes = this.#matchedRoutes;
+		for (let i = 0; i < matchedRoutes.length; i++) {
+			const route = matchedRoutes[i];
+			const trace = route.traceMatches(requestPattern);
+
+			// If we found a match, return immediately without building traces
+			if (trace.matches) {
+				return { traces: [], matched: true };
+			}
+
+			// Otherwise, store the trace for later use
+			allTraces.push({ ...trace, title: route.toString() });
+		}
+
+		// Collect traces from unmatched routes
+		const unmatchedRoutes = this.#unmatchedRoutes;
+		for (let i = 0; i < unmatchedRoutes.length; i++) {
+			const route = unmatchedRoutes[i];
+			const trace = route.traceMatches(requestPattern);
+
+			// Only store traces that don't match because this is likely an error
+			allTraces.push({ ...trace, title: route.toString() });
+		}
+
+		// Filter out traces that only have basic URL mismatch (single message)
+		// to focus on meaningful partial matches
+		const meaningfulTraces = allTraces.filter(
+			trace => trace.messages.length > 1,
+		);
+
+		return { traces: meaningfulTraces, matched: false };
+	}
+
+	/**
+	 * Determines if a route has been called.
+	 * @param {RequestPattern|string} request The request pattern to check.
+	 * @returns {boolean} `true` if the route was called, `false` if not.
+	 * @throws {Error} If the request pattern doesn't match any registered routes.
+	 */
+	called(request) {
+		if (this.#routes.length === 0) {
+			throw new Error("No routes registered to match against.");
+		}
+
+		const { traces, matched } = this.traceCalled(request);
+
+		if (matched) {
+			return true;
+		}
+
+		// if one of the traces matches then the route hasn't been called yet
+		if (traces.some(trace => trace.matches)) {
+			return false;
+		}
+
+		// No routes match this pattern at all, so throw an error
+		// We need to create a minimal Request-like object for the error
+		const requestPattern =
+			typeof request === "string"
+				? { method: "GET", url: request }
+				: request;
+
+		assertValidRequestPattern(requestPattern);
+
+		// if the URL doesn't begin with the baseUrl then add it
+		if (!requestPattern.url.startsWith(this.baseUrl)) {
+			requestPattern.url = new URL(requestPattern.url, this.baseUrl).href;
+		}
+
+		// Create a minimal Request-like object for the error
+		const mockRequest = new Request(requestPattern.url, {
+			method: requestPattern.method,
+			headers: new Headers(requestPattern.headers || {}),
+		});
+
+		throw new NoRouteMatchedError(mockRequest, null, traces);
 	}
 
 	/**
