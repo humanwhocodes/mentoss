@@ -56,7 +56,7 @@ export class RequestMatcher {
 
 	/**
 	 * The URL pattern to match.
-	 * @type {any}
+	 * @type {URLPattern}
 	 * @readonly
 	 */
 	#pattern;
@@ -115,7 +115,6 @@ export class RequestMatcher {
 		 * slash from the URL if it's present and add a trailing slash to the
 		 * base URL if it's not present.
 		 */
-		// @ts-ignore - URLPattern from polyfill
 		this.#pattern = new URLPattern(
 			url.startsWith("/") ? url.slice(1) : url,
 			!baseUrl || baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`,

@@ -3,7 +3,7 @@
  * @author Nicholas C. Zakas
  */
 
-/* global Response, FormData, setTimeout */
+/* global Request, Response, Headers, FormData, setTimeout */
 
 //-----------------------------------------------------------------------------
 // Imports
@@ -11,7 +11,7 @@
 
 import { RequestMatcher } from "./request-matcher.js";
 import { statusTexts } from "./http.js";
-import { getBody } from "./util.js";
+import { getBody, NoRouteMatchedError } from "./util.js";
 
 //-----------------------------------------------------------------------------
 // Type Definitions
@@ -593,31 +593,30 @@ export class MockServer {
 			requestPattern.url = new URL(requestPattern.url, this.baseUrl).href;
 		}
 
-		// First check if any matched routes match
+		const allTraces = [];
+
+		// Check matched routes and collect traces in a single pass
 		const matchedRoutes = this.#matchedRoutes;
 		for (let i = 0; i < matchedRoutes.length; i++) {
 			const route = matchedRoutes[i];
-			if (route.matches(requestPattern)) {
+			const trace = route.traceMatches(requestPattern);
+
+			// If we found a match, return immediately without building traces
+			if (trace.matches) {
 				return { traces: [], matched: true };
 			}
-		}
 
-		// If no matched routes match, collect traces from all routes
-		const allTraces = [];
-
-		// First collect traces from matched routes
-		for (let i = 0; i < matchedRoutes.length; i++) {
-			const route = matchedRoutes[i];
-			const trace = route.traceMatches(requestPattern);
-			trace.messages.push("❌ Route was already called.");
+			// Otherwise, store the trace for later use
 			allTraces.push({ ...trace, title: route.toString() });
 		}
 
-		// Then collect traces from unmatched routes
+		// Collect traces from unmatched routes
 		const unmatchedRoutes = this.#unmatchedRoutes;
 		for (let i = 0; i < unmatchedRoutes.length; i++) {
 			const route = unmatchedRoutes[i];
 			const trace = route.traceMatches(requestPattern);
+
+			// Only store traces that don't match because this is likely an error
 			allTraces.push({ ...trace, title: route.toString() });
 		}
 
@@ -637,13 +636,18 @@ export class MockServer {
 	 * @throws {Error} If the request pattern doesn't match any registered routes.
 	 */
 	called(request) {
+		if (this.#routes.length === 0) {
+			throw new Error("No routes registered to match against.");
+		}
+
 		const { traces, matched } = this.traceCalled(request);
 
 		if (matched) {
 			return true;
 		}
 
-		if (traces.length > 0) {
+		// if one of the traces matches then the route hasn't been called yet
+		if (traces.some(trace => trace.matches)) {
 			return false;
 		}
 
@@ -662,13 +666,12 @@ export class MockServer {
 		}
 
 		// Create a minimal Request-like object for the error
-		const mockRequest = {
+		const mockRequest = new Request(requestPattern.url, {
 			method: requestPattern.method,
-			url: requestPattern.url,
 			headers: new Headers(requestPattern.headers || {}),
-		};
+		});
 
-		throw new Error("This request pattern doesn't match any registered routes.");
+		throw new NoRouteMatchedError(mockRequest, null, traces);
 	}
 
 	/**

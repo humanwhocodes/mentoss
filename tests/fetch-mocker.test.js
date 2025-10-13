@@ -397,8 +397,7 @@ describe("FetchMocker", () => {
 				body: "Hello world!",
 			});
 
-			await fetchMocker.fetch(API_URL + "/hello");
-			assert.ok(!fetchMocker.called(API_URL + "/goodbye"));
+			assert.ok(!fetchMocker.called(API_URL + "/hello"));
 		});
 
 		it("should return true when a request object has been matched by a server", async () => {
