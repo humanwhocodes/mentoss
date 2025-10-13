@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.12.0](https://github.com/humanwhocodes/mentoss/compare/mentoss-v0.11.0...mentoss-v0.12.0) (2025-10-13)
+
+
+### Features
+
+* Enhance called() method to throw error when no routes match ([#112](https://github.com/humanwhocodes/mentoss/issues/112)) ([206eda2](https://github.com/humanwhocodes/mentoss/commit/206eda24b7a1644d9e19053eef658683ab058b97))
+
 ## [0.11.0](https://github.com/humanwhocodes/mentoss/compare/mentoss-v0.10.0...mentoss-v0.11.0) (2025-04-24)
 
 
