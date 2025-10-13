@@ -4,14 +4,15 @@ on:
             - main
 name: release-please
 
-permissions:
-    contents: write
-    pull-requests: write
-    id-token: write
-
 jobs:
     release-please:
         runs-on: ubuntu-latest
+        permissions:
+            contents: write
+            pull-requests: write
+            id-token: write
+            models: read
+
         steps:
             - uses: googleapis/release-please-action@7987652d64b4581673a76e33ad5e98e3dd56832f
               id: release
@@ -19,12 +20,12 @@ jobs:
                   token: ${{ secrets.GITHUB_TOKEN }}
 
             # The logic below handles the npm publication:
-            - uses: actions/checkout@v4
+            - uses: actions/checkout@v5
               # these if statements ensure that a publication only occurs when
               # a new release is created:
               if: ${{ steps.release.outputs.release_created }}
 
-            - uses: actions/setup-node@v4
+            - uses: actions/setup-node@v5
               with:
                   node-version: lts/*
                   registry-url: "https://registry.npmjs.org"
@@ -33,10 +34,12 @@ jobs:
             - run: npm ci
               if: ${{ steps.release.outputs.release_created }}
 
+            - name: Update npm
+              run: npm install -g npm@latest
+              if: ${{ steps.release.outputs.release_created }}
+
             - name: Publish to npm
               run: npm publish
-              env:
-                  NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
               if: ${{ steps.release.outputs.release_created }}
 
             - name: Publish to JSR
@@ -57,7 +60,7 @@ jobs:
             - run: npx @humanwhocodes/social-changelog --org humanwhocodes --repo mentoss --name Mentoss --tag ${{ steps.release.outputs.tag_name }} > social-post.txt
               if: ${{ steps.release.outputs.release_created }}
               env:
-                  OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
             # Tweets out release announcement
             - run: "npx @humanwhocodes/crosspost -t -b -m -l --file social-post.txt"
