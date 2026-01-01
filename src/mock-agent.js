@@ -3,20 +3,37 @@
  * @author Nicholas C. Zakas
  */
 
-/* globals Buffer */
+/* globals Buffer, Request */
 
 //-----------------------------------------------------------------------------
 // Imports
 //-----------------------------------------------------------------------------
 
 import { NoRouteMatchedError } from "./util.js";
-import { Readable } from "node:stream";
 
 //-----------------------------------------------------------------------------
 // Type Definitions
 //-----------------------------------------------------------------------------
 
 /** @typedef {import("./mock-server.js").MockServer} MockServer */
+
+/**
+ * @typedef {Object} DispatchOptions
+ * @property {string|URL} origin The origin of the request.
+ * @property {string} path The path of the request.
+ * @property {string} [method='GET'] The HTTP method.
+ * @property {any} [body] The request body.
+ * @property {Record<string, string | string[]> | string[] | Array<[string, string]>} [headers] The request headers.
+ */
+
+/**
+ * @typedef {Object} DispatchHandler
+ * @property {Function} [onConnect] Callback when connection is established.
+ * @property {Function} [onHeaders] Callback when headers are received.
+ * @property {Function} [onData] Callback when data is received.
+ * @property {Function} [onComplete] Callback when request is complete.
+ * @property {Function} [onError] Callback when an error occurs.
+ */
 
 //-----------------------------------------------------------------------------
 // Helpers
@@ -54,7 +71,7 @@ function convertUndiciHeaders(headers) {
 /**
  * Converts a body to a Buffer for undici.
  * @param {any} body The body to convert.
- * @returns {Promise<Buffer>} The converted body.
+ * @returns {Promise<any>} The converted body.
  */
 async function convertBodyToBuffer(body) {
 	if (!body) {
@@ -77,19 +94,11 @@ async function convertBodyToBuffer(body) {
 		return Buffer.from(body);
 	}
 
-	// Handle streams
-	if (body instanceof Readable) {
-		const chunks = [];
-		for await (const chunk of body) {
-			chunks.push(chunk);
-		}
-		return Buffer.concat(chunks);
-	}
-
-	// Handle iterables
+	// Handle streams and iterables
 	if (
-		typeof body[Symbol.iterator] === "function" ||
-		typeof body[Symbol.asyncIterator] === "function"
+		typeof body?.read === "function" || // Check if it's a stream
+		typeof body?.[Symbol.iterator] === "function" ||
+		typeof body?.[Symbol.asyncIterator] === "function"
 	) {
 		const chunks = [];
 		for await (const chunk of body) {
@@ -159,18 +168,8 @@ export class MockAgent {
 
 	/**
 	 * Dispatches an HTTP request through the mock servers.
-	 * @param {object} options The dispatch options.
-	 * @param {string|URL} options.origin The origin of the request.
-	 * @param {string} options.path The path of the request.
-	 * @param {string} [options.method='GET'] The HTTP method.
-	 * @param {any} [options.body] The request body.
-	 * @param {Record<string, string | string[]> | string[] | Iterable} [options.headers] The request headers.
-	 * @param {object} handler The handler for the response.
-	 * @param {Function} handler.onConnect Callback when connection is established.
-	 * @param {Function} handler.onHeaders Callback when headers are received.
-	 * @param {Function} handler.onData Callback when data is received.
-	 * @param {Function} handler.onComplete Callback when request is complete.
-	 * @param {Function} handler.onError Callback when an error occurs.
+	 * @param {DispatchOptions} options The dispatch options.
+	 * @param {DispatchHandler} handler The handler for the response.
 	 * @returns {boolean} Returns true if the request was dispatched successfully.
 	 */
 	dispatch(options, handler) {
@@ -193,8 +192,8 @@ export class MockAgent {
 
 	/**
 	 * Processes a request internally.
-	 * @param {object} options The dispatch options.
-	 * @param {object} handler The handler for the response.
+	 * @param {DispatchOptions} options The dispatch options.
+	 * @param {DispatchHandler} handler The handler for the response.
 	 * @returns {Promise<void>} A promise that resolves when the request is complete.
 	 */
 	async #processRequest(options, handler) {
