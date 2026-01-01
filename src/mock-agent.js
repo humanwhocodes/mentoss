@@ -168,6 +168,8 @@ export class MockAgent {
 
 	/**
 	 * Dispatches an HTTP request through the mock servers.
+	 * Note: This method returns immediately (fire-and-forget pattern) and processes
+	 * the request asynchronously. Errors are reported through handler.onError.
 	 * @param {DispatchOptions} options The dispatch options.
 	 * @param {DispatchHandler} handler The handler for the response.
 	 * @returns {boolean} Returns true if the request was dispatched successfully.
@@ -214,9 +216,10 @@ export class MockAgent {
 			});
 
 			// Notify that connection is established
+			// Note: Abort functionality is not currently implemented for mock scenarios
 			if (handler.onConnect) {
 				handler.onConnect(() => {
-					// abort function - for now we don't support aborting
+					// abort function - not implemented as mocks complete immediately
 				});
 			}
 
@@ -224,6 +227,7 @@ export class MockAgent {
 			const response = await this.#internalFetch(request, body);
 
 			// Send headers to handler
+			// Note: Pause/resume functionality is not needed for mock scenarios
 			if (handler.onHeaders) {
 				const responseHeaders = [];
 				for (const [key, value] of response.headers) {
@@ -234,7 +238,7 @@ export class MockAgent {
 					response.status,
 					responseHeaders,
 					() => {
-						// resume function - for now we don't need to pause/resume
+						// resume function - not needed as mocks don't require flow control
 					},
 				);
 			}
