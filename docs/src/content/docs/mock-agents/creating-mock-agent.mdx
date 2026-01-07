@@ -3,11 +3,11 @@ title: Creating a Mock Agent
 description: Learn how to create a mock agent for undici
 ---
 
-A _mock agent_ in Mentoss is an undici Dispatcher that intercepts HTTP requests made by undici and returns responses that you've defined in your mock servers. This allows you to test Node.js applications that use undici without making real network requests.
+A _mock agent_ in Mentoss is an undici `Dispatcher` that intercepts HTTP requests made by undici and returns responses that you've defined in your mock servers. This allows you to test Node.js applications that use undici without making real network requests.
 
 ## What is undici?
 
-[undici](https://undici.nodejs.org/) is a high-performance HTTP client for Node.js. It's used internally by Node.js for `fetch()` and is also available as a standalone library. If you're testing code that uses undici's `request()`, `stream()`, or `pipeline()` methods, you'll want to use `MockAgent`.
+[undici](https://undici.nodejs.org/) is a high-performance HTTP client for Node.js. It's used internally by Node.js for `fetch()` and is also available as a standalone library. If you're testing code that uses undici's `request()`, `stream()`, or `pipeline()` methods, or Node.js's native `fetch()` function, you'll want to use `MockAgent`.
 
 ## Create a new `MockAgent` instance
 
@@ -27,7 +27,45 @@ const agent = new MockAgent({
 });
 ```
 
-With your mock agent created, you can now use it with undici.
+With your mock agent created, you can now use it with Node.js `fetch()` or undici.
+
+## Use the mock agent with Node.js `fetch()`
+
+Node.js has a native `fetch()` function (available in Node.js 18+) that accepts a `dispatcher` option. You can use `MockAgent` as the dispatcher to mock requests:
+
+```js
+import { MockServer, MockAgent } from "mentoss";
+import { expect } from "chai";
+
+describe("My API with Node.js fetch()", () => {
+	const server = new MockServer("https://api.example.com");
+	const agent = new MockAgent({
+		servers: [server],
+	});
+
+	// reset the server after each test
+	afterEach(() => {
+		agent.clearAll();
+	});
+
+	it("should return a 200 status code", async () => {
+		// set up the route to test
+		server.get("/ping", { status: 200, body: "pong" });
+
+		// make the request using the mock agent
+		const response = await fetch("https://api.example.com/ping", {
+			dispatcher: agent,
+		});
+
+		// check the response
+		expect(response.status).to.equal(200);
+
+		// read the body
+		const bodyText = await response.text();
+		expect(bodyText).to.equal("pong");
+	});
+});
+```
 
 ## Use the mock agent with undici
 
@@ -81,10 +119,10 @@ The `MockAgent` class is similar to `FetchMocker` but has some key differences:
 - Both provide a `clearAll()` method to reset the servers
 
 ### What's different:
-- `MockAgent` does not support `baseUrl` - undici requests always use absolute URLs
+- `MockAgent` does not support `baseUrl` - undici and Node.js fetch requests always use absolute URLs
 - `MockAgent` does not support `credentials` - credentials are only relevant for browser contexts
 - `MockAgent` implements the undici `Dispatcher` interface with `dispatch()`, `close()`, and `destroy()` methods
-- `MockAgent` is specifically designed for use with undici, not the browser `fetch()` API
+- `MockAgent` is specifically designed for use with undici and Node.js `fetch()`, not browser `fetch()`
 
 ## Testing helpers
 
