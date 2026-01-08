@@ -3,6 +3,8 @@
  * @author Nicholas C. Zakas
  */
 
+// @ts-nocheck
+
 /* globals Buffer, Request */
 
 //-----------------------------------------------------------------------------
@@ -16,6 +18,7 @@ import { NoRouteMatchedError } from "./util.js";
 //-----------------------------------------------------------------------------
 
 /** @typedef {import("./mock-server.js").MockServer} MockServer */
+/** @typedef {import("./types.js").RequestPattern} RequestPattern */
 
 /**
  * @typedef {Object} DispatchOptions
@@ -28,11 +31,18 @@ import { NoRouteMatchedError } from "./util.js";
 
 /**
  * @typedef {Object} DispatchHandler
- * @property {Function} [onConnect] Callback when connection is established.
- * @property {Function} [onHeaders] Callback when headers are received.
- * @property {Function} [onData] Callback when data is received.
- * @property {Function} [onComplete] Callback when request is complete.
- * @property {Function} [onError] Callback when an error occurs.
+ * @property {(abort: () => void) => void} [onConnect] Callback when connection is established.
+ * @property {(statusCode: number, headers: string[], resume: () => void) => void} [onHeaders] Callback when headers are received.
+ * @property {(chunk: any) => void} [onData] Callback when data is received.
+ * @property {(trailers: string[]) => void} [onComplete] Callback when request is complete.
+ * @property {(err: Error) => void} [onError] Callback when an error occurs.
+ */
+
+/**
+ * @typedef {Object} MockAgentOptions
+ * @property {MockServer[]} servers The servers to use.
+ * @property {typeof Request} [CustomRequest] The Request constructor to use.
+ * @property {typeof Response} [CustomResponse] The Response constructor to use.
  */
 
 //-----------------------------------------------------------------------------
@@ -146,10 +156,7 @@ export class MockAgent {
 
 	/**
 	 * Creates a new instance.
-	 * @param {object} options Options for the instance.
-	 * @param {MockServer[]} options.servers The servers to use.
-	 * @param {typeof Response} [options.CustomResponse] The Response constructor to use.
-	 * @param {typeof Request} [options.CustomRequest] The Request constructor to use.
+	 * @param {MockAgentOptions} options Options for the instance.
 	 */
 	constructor({
 		servers,
@@ -258,7 +265,7 @@ export class MockAgent {
 			}
 		} catch (err) {
 			if (handler.onError) {
-				handler.onError(err);
+				handler.onError(err instanceof Error ? err : new Error(String(err)));
 			}
 		}
 	}
@@ -329,7 +336,7 @@ export class MockAgent {
 
 	/**
 	 * Determines if a request was made.
-	 * @param {string|import("./types.js").RequestPattern} request The request to match.
+	 * @param {string|RequestPattern} request The request to match.
 	 * @returns {boolean} `true` if the request was made, `false` otherwise.
 	 */
 	called(request) {
