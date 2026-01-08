@@ -20,10 +20,13 @@ npm install mentoss
 
 ## Usage
 
-There are two primary classes in Mentoss:
+There are three primary classes in Mentoss:
 
 1. `MockServer` - a server implementation where you can mock out requests and responses
-1. `FetchMocker` - the utility that creates a new `fetch()` function that calls one or more `MockServers`
+2. `FetchMocker` - the utility that creates a new `fetch()` function that calls one or more `MockServers`
+3. `MockAgent` - an undici Dispatcher that intercepts undici requests and routes them to `MockServers`
+
+### Using with `fetch()` (browser and Node.js)
 
 In general, you'll create a `MockServer` first and then create a `FetchMocker`, like this:
 
@@ -85,6 +88,42 @@ server.clear();
 // clear everything in the mocker (including servers)
 mocker.clearAll();
 ```
+
+### Using with undici (Node.js only)
+
+If you're using [undici](https://undici.nodejs.org/) for HTTP requests, you can use `MockAgent` as a dispatcher:
+
+```js
+import { MockServer, MockAgent } from "mentoss";
+import { request } from "undici";
+
+// create a new server with the given base URL
+const server = new MockServer("https://api.example.com");
+
+// simple mocked route
+server.get("/foo/bar", { status: 200, body: "OK" });
+
+// create an agent that uses the server
+const agent = new MockAgent({
+	servers: [server],
+});
+
+// make a request using the agent as a dispatcher
+const { statusCode, body } = await request("https://api.example.com/foo/bar", {
+	dispatcher: agent,
+});
+
+// check that the request was made
+assert(agent.called("https://api.example.com/foo/bar"));
+
+// check that all routes were called
+assert(agent.allRoutesCalled());
+
+// clear the agent
+agent.clearAll();
+```
+
+Note: `MockAgent` does not support `baseUrl` or `credentials` options, as these are only relevant for browser contexts.
 
 ## Development
 

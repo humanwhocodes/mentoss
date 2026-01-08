@@ -28,6 +28,10 @@ export default defineConfig({
 					label: "Fetch Mockers",
 					autogenerate: { directory: "fetch-mockers" },
 				},
+				{
+					label: "Mock Agents",
+					autogenerate: { directory: "mock-agents" },
+				},
 			],
 			components: {
 				Footer: "./src/components/MyFooter.astro",
