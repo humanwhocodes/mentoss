@@ -3,7 +3,13 @@ title: Creating a Mock Agent
 description: Learn how to create a mock agent for undici
 ---
 
+import { Aside } from "@astrojs/starlight/components";
+
 A _mock agent_ in Mentoss is an undici `Dispatcher` that intercepts HTTP requests made by undici and returns responses that you've defined in your mock servers. This allows you to test Node.js applications that use undici without making real network requests.
+
+<Aside type="caution">
+	`MockAgent` is designed for Node.js 18+ only and will not work in browsers. For browser testing, use `FetchMocker` instead.
+</Aside>
 
 ## What is undici?
 
