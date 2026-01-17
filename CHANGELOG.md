@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.13.0](https://github.com/humanwhocodes/mentoss/compare/mentoss-v0.12.0...mentoss-v0.13.0) (2026-01-17)
+
+
+### Features
+
+* Add MockAgent class for undici Dispatcher support ([#119](https://github.com/humanwhocodes/mentoss/issues/119)) ([9e7efe4](https://github.com/humanwhocodes/mentoss/commit/9e7efe44d08e0f08be6e1495cc5653bc67d1ad94))
+
 ## [0.12.0](https://github.com/humanwhocodes/mentoss/compare/mentoss-v0.11.0...mentoss-v0.12.0) (2025-10-13)
 
 
