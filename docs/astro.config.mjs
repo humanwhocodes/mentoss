@@ -7,6 +7,11 @@ export default defineConfig({
 	integrations: [
 		starlight({
 			title: "Mentoss",
+			customCss: ["./src/styles/custom.css"],
+			logo: {
+				src: "./src/assets/logo-small.png",
+			},
+			favicon: "./src/assets/logo-small.png",
 			social: {
 				github: "https://github.com/humanwhocodes/mentoss",
 			},
