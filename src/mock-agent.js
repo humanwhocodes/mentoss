@@ -155,6 +155,12 @@ export class MockAgent {
 	#Request;
 
 	/**
+	 * The original dispacher when overwriting the global fetch.
+	 * @type {unknown}
+	 */
+	#originalDispatcher;
+
+	/**
 	 * Creates a new instance.
 	 * @param {MockAgentOptions} options Options for the instance.
 	 */
@@ -394,6 +400,28 @@ export class MockAgent {
 	 */
 	clearAll() {
 		this.#servers.forEach(server => server.clear());
+	}
+
+	/**
+	 * Mocks the global fetch function.
+	 * @returns {void}
+	 */
+	mockGlobal() {
+		if (!this.#originalDispatcher) {
+			this.#originalDispatcher = globalThis[Symbol.for('undici.globalDispatcher.1')];
+			globalThis[Symbol.for('undici.globalDispatcher.1')] = this;
+		}
+	}
+
+	/**
+	 * Unmocks the global fetch function.
+	 * @returns {void}
+	 */
+	unmockGlobal() {
+		if(this.#originalDispatcher) {
+			globalThis[Symbol.for('undici.globalDispatcher.1')] = this.#originalDispatcher;
+			this.#originalDispatcher = undefined;
+		}
 	}
 
 	// #endregion: Testing Helpers
