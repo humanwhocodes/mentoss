@@ -664,4 +664,44 @@ describe("MockAgent", () => {
 			assert.strictEqual(agent.called(`${API_URL}/hello`), false);
 		});
 	});
+
+	describe("mockGlobal", () => {
+			it("should replace global fetch", () => {
+				const server = new MockServer(API_URL);
+				const mockAgent = new MockAgent({
+					servers: [server],
+				});
+	
+				const originalFetch = globalThis[Symbol.for('undici.globalDispatcher.1')];
+	
+				try {
+					mockAgent.mockGlobal();
+	
+					assert.strictEqual(globalThis[Symbol.for('undici.globalDispatcher.1')], mockAgent);
+				} finally {
+					globalThis[Symbol.for('undici.globalDispatcher.1')] = originalFetch;
+				}
+			});
+		});
+	
+		describe("unmockGlobal", () => {
+			it("should restore global fetch", () => {
+				const server = new MockServer(API_URL);
+				const mockAgent = new MockAgent({
+					servers: [server],
+				});
+	
+				const originalFetch = globalThis[Symbol.for('undici.globalDispatcher.1')];
+	
+				try {
+					mockAgent.mockGlobal();
+					mockAgent.unmockGlobal();
+	
+					assert.strictEqual(globalThis[Symbol.for('undici.globalDispatcher.1')], originalFetch);
+				} finally {
+					globalThis[Symbol.for('undici.globalDispatcher.1')] = originalFetch;
+				}
+			});
+		});
+	
 });
