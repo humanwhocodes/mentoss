@@ -115,6 +115,101 @@ describe("My API with undici", () => {
 });
 ```
 
+## Use the mock agent as the global dispatcher
+
+undici provides `setGlobalDispatcher()` and `getGlobalDispatcher()` to replace the default dispatcher used for all undici requests and Node.js `fetch()` calls that don't specify a dispatcher explicitly. This lets you mock every outgoing HTTP request in a test suite without having to pass `{ dispatcher: agent }` on every call.
+
+```js
+import { MockServer, MockAgent } from "mentoss";
+import { request, setGlobalDispatcher, getGlobalDispatcher } from "undici";
+import { expect } from "chai";
+
+describe("My API with a global dispatcher", () => {
+	const server = new MockServer("https://api.example.com");
+	const agent = new MockAgent({
+		servers: [server],
+	});
+
+	// save the original dispatcher so it can be restored later
+	const originalDispatcher = getGlobalDispatcher();
+
+	before(() => {
+		// replace the global dispatcher with the mock agent
+		setGlobalDispatcher(agent);
+	});
+
+	after(() => {
+		// restore the original dispatcher when done
+		setGlobalDispatcher(originalDispatcher);
+	});
+
+	afterEach(() => {
+		agent.clearAll();
+	});
+
+	it("should return a 200 status code", async () => {
+		// set up the route to test
+		server.get("/ping", { status: 200, body: "pong" });
+
+		// no need to pass a dispatcher – the global one is used automatically
+		const { statusCode, body } = await request(
+			"https://api.example.com/ping",
+		);
+
+		// check the response
+		expect(statusCode).to.equal(200);
+
+		// read the body
+		const bodyText = await body.text();
+		expect(bodyText).to.equal("pong");
+	});
+});
+```
+
+The same pattern works with Node.js `fetch()` — because Node.js `fetch()` internally uses undici, replacing the global dispatcher also intercepts calls made through `fetch()`:
+
+```js
+import { MockServer, MockAgent } from "mentoss";
+import { setGlobalDispatcher, getGlobalDispatcher } from "undici";
+import { expect } from "chai";
+
+describe("My API with global dispatcher and fetch()", () => {
+	const server = new MockServer("https://api.example.com");
+	const agent = new MockAgent({
+		servers: [server],
+	});
+
+	const originalDispatcher = getGlobalDispatcher();
+
+	before(() => {
+		setGlobalDispatcher(agent);
+	});
+
+	after(() => {
+		setGlobalDispatcher(originalDispatcher);
+	});
+
+	afterEach(() => {
+		agent.clearAll();
+	});
+
+	it("should intercept fetch() calls", async () => {
+		server.get("/ping", { status: 200, body: "pong" });
+
+		// plain fetch() – no dispatcher option required
+		const response = await fetch("https://api.example.com/ping");
+
+		expect(response.status).to.equal(200);
+		const bodyText = await response.text();
+		expect(bodyText).to.equal("pong");
+	});
+});
+```
+
+<Aside type="tip">
+	Always restore the original dispatcher in an `after` hook (or equivalent teardown) so that other tests in your suite are not affected.
+</Aside>
+
 ## Differences from FetchMocker
 
 The `MockAgent` class is similar to `FetchMocker` but has some key differences:
