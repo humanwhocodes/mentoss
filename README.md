@@ -125,6 +125,28 @@ agent.clearAll();
 
 Note: `MockAgent` does not support `baseUrl` or `credentials` options, as these are only relevant for browser contexts.
 
+You can also use `setGlobalDispatcher` and `getGlobalDispatcher` from undici to intercept all requests globally without passing `dispatcher` on every call:
+
+```js
+import { MockServer, MockAgent } from "mentoss";
+import { request, setGlobalDispatcher, getGlobalDispatcher } from "undici";
+
+const server = new MockServer("https://api.example.com");
+server.get("/foo/bar", { status: 200, body: "OK" });
+
+const agent = new MockAgent({ servers: [server] });
+
+// save the original dispatcher and replace it with the mock agent
+const originalDispatcher = getGlobalDispatcher();
+setGlobalDispatcher(agent);
+
+// requests no longer need an explicit dispatcher option
+const { statusCode } = await request("https://api.example.com/foo/bar");
+
+// restore the original dispatcher when done
+setGlobalDispatcher(originalDispatcher);
+```
+
 ## Development
 
 To work on Mentoss, you'll need:
